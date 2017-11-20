@@ -256,12 +256,26 @@ func printSchema(tables map[string]*table) {
 
 	for _, tableName := range tableNames {
 		table := tables[tableName]
-		fmt.Printf("CREATE SEQUENCE %s (\n", tableName)
+		fmt.Printf("CREATE TABLE %s (\n", tableName)
+		i = 0
 		for columnName, column := range table.Columns {
-			fmt.Printf("    %s %s,\n", columnName, column)
+			fmt.Printf("    %s %s", columnName, column)
+			if i == len(table.Columns)-1 && len(table.Constraints) == 0 {
+				fmt.Println()
+			} else {
+				fmt.Print(",\n")
+			}
+			i++
 		}
+		i = 0
 		for _, constraint := range table.Constraints {
-			fmt.Printf("    %s,\n", constraint)
+			fmt.Printf("    %s", constraint)
+			if i == len(table.Constraints)-1 {
+				fmt.Println()
+			} else {
+				fmt.Print(",\n")
+			}
+			i++
 		}
 		fmt.Println(");")
 		if len(table.Sequence) > 0 {
