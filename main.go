@@ -10,6 +10,11 @@ import (
 	"strings"
 )
 
+type table struct {
+	Columns     map[string]string
+	Constraints []string
+}
+
 func main() {
 	if len(os.Args)-1 == 0 {
 		log.Fatal("Missing argument: \"postgres-dump-sanitiser <file>\"")
@@ -26,7 +31,7 @@ func main() {
 	reader := bufio.NewReader(file)
 
 	lines := make([]string, 0)
-	bufferLines := make([]string, 0)
+	var bufferLines []string
 	// read file by line till EOF
 	for {
 		line, eof := readLine(reader)
@@ -87,7 +92,36 @@ func main() {
 		lines = append(lines, line)
 	}
 
-	// 4. Combine create sequence and alter sequence owned by
+	// 4. Group and map table statements
+	bufferLines = make([]string, 0)
+	tables := make(map[string]table)
+	for i := 0; i < len(lines); i++ {
+		line := lines[i]
+		if strings.Contains(line, "CREATE TABLE") {
+			tableName := strings.Split(line, " ")[2]
+			table := table{
+				Columns:     make(map[string]string),
+				Constraints: make([]string, 0),
+			}
+
+			j := i + 1
+			for ; lines[j][len(lines[j])-1] != ';'; j++ {
+				columnLine := strings.Trim(lines[j], " ")
+				spaceIndex := strings.Index(columnLine, " ")
+				columnName := columnLine[:spaceIndex]
+				table.Columns[columnName] = columnLine[spaceIndex+1:]
+			}
+
+			tables[tableName] = table
+			i = j
+		} else {
+			bufferLines = append(bufferLines, line)
+		}
+	}
+	lines = bufferLines
+
+	// 5. Combine create sequence and alter sequence owned by
+	bufferLines = make([]string, 0)
 	for i, line := range lines {
 		if strings.Contains(line, "CREATE SEQUENCE") {
 			seqName := strings.Split(line, " ")[2]
@@ -107,10 +141,6 @@ func main() {
 	for _, line := range lines {
 		fmt.Println(line)
 	}
-
-	// for _, line := range lines {
-	// 	fmt.Println(line)
-	// }
 }
 
 func readLine(reader *bufio.Reader) (string, bool) {
