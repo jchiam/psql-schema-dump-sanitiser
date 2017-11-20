@@ -7,6 +7,7 @@ import (
 	"log"
 	"os"
 	"regexp"
+	"sort"
 	"strings"
 )
 
@@ -227,7 +228,34 @@ func main() {
 	lines = bufferLines
 
 	// 9. Print
-	for tableName, table := range tables {
+	printSchema(tables)
+}
+
+func readLine(reader *bufio.Reader) (string, bool) {
+	lineBytes, _, err := reader.ReadLine()
+	if err != nil {
+		if err != io.EOF {
+			log.Fatal(err)
+		}
+		return "", true
+	}
+	return string(lineBytes), false
+}
+
+func printSchema(tables map[string]*table) {
+	tableNames := make([]string, len(tables)-1)
+	i := 0
+	for k := range tables {
+		if k == "gorp_migrations" {
+			continue
+		}
+		tableNames[i] = k
+		i++
+	}
+	sort.Strings(tableNames)
+
+	for _, tableName := range tableNames {
+		table := tables[tableName]
 		fmt.Printf("CREATE SEQUENCE %s (\n", tableName)
 		for columnName, column := range table.Columns {
 			fmt.Printf("    %s %s,\n", columnName, column)
@@ -244,15 +272,4 @@ func main() {
 		}
 		fmt.Println()
 	}
-}
-
-func readLine(reader *bufio.Reader) (string, bool) {
-	lineBytes, _, err := reader.ReadLine()
-	if err != nil {
-		if err != io.EOF {
-			log.Fatal(err)
-		}
-		return "", true
-	}
-	return string(lineBytes), false
 }
