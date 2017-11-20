@@ -188,7 +188,7 @@ func main() {
 				}
 			}
 			columns := tables[tableName].Columns
-			columns[columnName] = line[index : len(line)-1]
+			columns[columnName] += " " + line[index:len(line)-1]
 			tables[tableName].Columns = columns
 		} else {
 			bufferLines = append(bufferLines, line)
