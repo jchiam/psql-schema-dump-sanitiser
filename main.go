@@ -13,6 +13,7 @@ import (
 type table struct {
 	Columns     map[string]string
 	Constraints []string
+	Sequence    string
 }
 
 func main() {
@@ -94,7 +95,7 @@ func main() {
 
 	// 4. Group and map table statements
 	bufferLines = make([]string, 0)
-	tables := make(map[string]table)
+	tables := make(map[string]*table)
 	for i := 0; i < len(lines); i++ {
 		line := lines[i]
 		if strings.Contains(line, "CREATE TABLE") {
@@ -102,6 +103,7 @@ func main() {
 			table := table{
 				Columns:     make(map[string]string),
 				Constraints: make([]string, 0),
+				Sequence:    "",
 			}
 
 			j := i + 1
@@ -112,7 +114,7 @@ func main() {
 				table.Columns[columnName] = columnLine[spaceIndex+1:]
 			}
 
-			tables[tableName] = table
+			tables[tableName] = &table
 			i = j
 		} else {
 			bufferLines = append(bufferLines, line)
@@ -128,7 +130,10 @@ func main() {
 			seqName = seqName[:len(seqName)-1]
 			if strings.Contains(lines[i+1], "ALTER SEQUENCE "+seqName) {
 				ownedBy := strings.Split(lines[i+1], " ")[5]
-				bufferLines = append(bufferLines, line[:len(line)-1]+" OWNED BY "+ownedBy+";")
+				seqTable := strings.Split(ownedBy, ".")[0]
+				seqColumn := strings.Split(ownedBy, ".")[1]
+				seqColumn = seqColumn[:len(seqColumn)-1]
+				tables[seqTable].Sequence = line[:len(line)-1] + " OWNED BY " + ownedBy + ";"
 			}
 		} else if strings.Contains(line, "ALTER SEQUENCE") && strings.Contains(line, "OWNED BY") {
 			continue
