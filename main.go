@@ -136,9 +136,7 @@ func main() {
 			if strings.Contains(lines[i+1], "ALTER SEQUENCE "+seqName) {
 				ownedBy := strings.Split(lines[i+1], " ")[5]
 				seqTable := strings.Split(ownedBy, ".")[0]
-				seqColumn := strings.Split(ownedBy, ".")[1]
-				seqColumn = seqColumn[:len(seqColumn)-1]
-				tables[seqTable].Sequence = line[:len(line)-1] + " OWNED BY " + ownedBy + ";"
+				tables[seqTable].Sequence = line[:len(line)-1] + " OWNED BY " + ownedBy
 			}
 		} else if strings.Contains(line, "ALTER SEQUENCE") && strings.Contains(line, "OWNED BY") {
 			continue
