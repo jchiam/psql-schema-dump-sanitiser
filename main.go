@@ -112,7 +112,11 @@ func main() {
 				columnLine := strings.Trim(lines[j], " ")
 				spaceIndex := strings.Index(columnLine, " ")
 				columnName := columnLine[:spaceIndex]
-				table.Columns[columnName] = columnLine[spaceIndex+1:]
+				if columnLine[len(columnLine)-1] == ',' {
+					table.Columns[columnName] = columnLine[spaceIndex+1 : len(columnLine)-1]
+				} else {
+					table.Columns[columnName] = columnLine[spaceIndex+1:]
+				}
 			}
 
 			tables[tableName] = &table
