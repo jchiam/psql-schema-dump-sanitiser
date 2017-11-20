@@ -164,6 +164,24 @@ func main() {
 	}
 	lines = bufferLines
 
+	// 7. Add default values to columns
+	// TODO
+
+	// 8. Map constraint statements to tables
+	bufferLines = make([]string, 0)
+	for _, line := range lines {
+		index := strings.Index(line, "CONSTRAINT")
+		if index != -1 {
+			tokens := strings.Split(line, " ")
+			tableName := tokens[3]
+			constraints := tables[tableName].Constraints
+			tables[tableName].Constraints = append(constraints, line[index:len(line)-1])
+		} else {
+			bufferLines = append(bufferLines, line)
+		}
+	}
+	lines = bufferLines
+
 	for _, line := range lines {
 		fmt.Println(line)
 	}
