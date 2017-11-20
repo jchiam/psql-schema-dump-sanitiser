@@ -104,7 +104,6 @@ func main() {
 			table := table{
 				Columns:     make(map[string]string),
 				Constraints: make([]string, 0),
-				Sequence:    "",
 			}
 
 			j := i + 1
@@ -227,8 +226,23 @@ func main() {
 	}
 	lines = bufferLines
 
-	for _, line := range lines {
-		fmt.Println(line)
+	// 9. Print
+	for tableName, table := range tables {
+		fmt.Printf("CREATE SEQUENCE %s (\n", tableName)
+		for columnName, column := range table.Columns {
+			fmt.Printf("    %s %s,\n", columnName, column)
+		}
+		for _, constraint := range table.Constraints {
+			fmt.Printf("    %s,\n", constraint)
+		}
+		fmt.Println(");")
+		if len(table.Sequence) > 0 {
+			fmt.Println(table.Sequence)
+		}
+		if len(table.Index) > 0 {
+			fmt.Println(table.Index)
+		}
+		fmt.Println()
 	}
 }
 
