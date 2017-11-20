@@ -14,6 +14,7 @@ type table struct {
 	Columns     map[string]string
 	Constraints []string
 	Sequence    string
+	Index       string
 }
 
 func main() {
@@ -176,6 +177,24 @@ func main() {
 			tableName := tokens[3]
 			constraints := tables[tableName].Constraints
 			tables[tableName].Constraints = append(constraints, line[index:len(line)-1])
+		} else {
+			bufferLines = append(bufferLines, line)
+		}
+	}
+	lines = bufferLines
+
+	// 9. Map index statements to tables
+	bufferLines = make([]string, 0)
+	for _, line := range lines {
+		if strings.Contains(line, "INDEX") {
+			tokens := strings.Split(line, " ")
+			tableName := ""
+			for i := range tokens {
+				if tokens[i] == "ON" {
+					tableName = tokens[i+1]
+				}
+			}
+			tables[tableName].Index = line
 		} else {
 			bufferLines = append(bufferLines, line)
 		}
