@@ -1,0 +1,4 @@
+*.git
+
+schema.sql
+output.sql
