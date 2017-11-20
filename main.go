@@ -26,6 +26,7 @@ func main() {
 	reader := bufio.NewReader(file)
 
 	lines := make([]string, 0)
+	bufferLines := make([]string, 0)
 	// read file by line till EOF
 	for {
 		line, eof := readLine(reader)
@@ -84,6 +85,26 @@ func main() {
 		}
 
 		lines = append(lines, line)
+	}
+
+	// 4. Combine create sequence and alter sequence owned by
+	for i, line := range lines {
+		if strings.Contains(line, "CREATE SEQUENCE") {
+			seqName := strings.Split(line, " ")[2]
+			seqName = seqName[:len(seqName)-1]
+			if strings.Contains(lines[i+1], "ALTER SEQUENCE "+seqName) {
+				ownedBy := strings.Split(lines[i+1], " ")[5]
+				bufferLines = append(bufferLines, line[:len(line)-1]+" OWNED BY "+ownedBy+";")
+			}
+		} else if strings.Contains(line, "ALTER SEQUENCE") && strings.Contains(line, "OWNED BY") {
+			continue
+		} else {
+			bufferLines = append(bufferLines, line)
+		}
+	}
+	lines = bufferLines
+
+	for _, line := range lines {
 		fmt.Println(line)
 	}
 
