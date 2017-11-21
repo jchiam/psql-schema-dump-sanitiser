@@ -18,6 +18,25 @@ type Table struct {
 	Index       string
 }
 
+// Checks if line is a redundant sql statement or comment
+func IsRedundant(line string) bool {
+	if len(line) == 0 {
+		return true
+	}
+
+	tokens := strings.Split(line, " ")
+	// Skip lines that start with "--", "SET"
+	if tokens[0] == "--" || tokens[0] == "SET" {
+		return true
+	}
+	// Skip extension and owner statements
+	if strings.Contains(line, "EXTENSION") || strings.Contains(line, "OWNER") {
+		return true
+	}
+
+	return false
+}
+
 // MapTables parses sql statements and returns a map of Table structs containing information of table's structure
 // and the remaining unprocessed lines
 func MapTables(lines []string) (map[string]*Table, []string) {

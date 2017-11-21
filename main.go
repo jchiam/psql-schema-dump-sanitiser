@@ -5,7 +5,6 @@ import (
 	"fmt"
 	"log"
 	"os"
-	"strings"
 
 	"github.com/psql-schema-dump-sanitiser.git/parse"
 )
@@ -32,20 +31,11 @@ func main() {
 		if eof {
 			break
 		}
-		if len(line) == 0 {
-			continue
-		}
-		tokens := strings.Split(line, " ")
 
-		// 1. Skip lines that start with "--", "SET"
-		if tokens[0] == "--" || tokens[0] == "SET" {
+		// 1. Check for redundant lines
+		if parse.IsRedundant(line) {
 			continue
 		}
-		// 2. Remove extension and owner statements
-		if strings.Contains(line, "EXTENSION") || strings.Contains(line, "OWNER") {
-			continue
-		}
-
 		lines = append(lines, line)
 	}
 
