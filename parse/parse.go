@@ -10,9 +10,16 @@ import (
 	"strings"
 )
 
+// Column is the struct containing logical aspects of a table column
+type Column struct {
+	Statement    string
+	IsPrimaryKey bool
+	IsForeignKey bool
+}
+
 // Table is the struct containing logical aspects of a psql table's structure
 type Table struct {
-	Columns     map[string]string
+	Columns     map[string]*Column
 	Constraints []string
 	Sequence    string
 	Index       string
@@ -51,7 +58,7 @@ func MapTables(lines []string) (map[string]*Table, []string) {
 		if strings.Contains(line, "CREATE TABLE") {
 			tableName := strings.Split(line, " ")[2]
 			table := Table{
-				Columns:     make(map[string]string),
+				Columns:     make(map[string]*Column),
 				Constraints: make([]string, 0),
 			}
 
@@ -61,9 +68,17 @@ func MapTables(lines []string) (map[string]*Table, []string) {
 				spaceIndex := strings.Index(columnLine, " ")
 				columnName := columnLine[:spaceIndex]
 				if columnLine[len(columnLine)-1] == ',' {
-					table.Columns[columnName] = columnLine[spaceIndex+1 : len(columnLine)-1]
+					table.Columns[columnName] = &Column{
+						Statement:    columnLine[spaceIndex+1 : len(columnLine)-1],
+						IsPrimaryKey: false,
+						IsForeignKey: false,
+					}
 				} else {
-					table.Columns[columnName] = columnLine[spaceIndex+1:]
+					table.Columns[columnName] = &Column{
+						Statement:    columnLine[spaceIndex+1:],
+						IsPrimaryKey: false,
+						IsForeignKey: false,
+					}
 				}
 			}
 
@@ -173,7 +188,7 @@ func MapDefaultValues(lines []string, tables map[string]*Table) []string {
 				}
 			}
 			columns := tables[tableName].Columns
-			columns[columnName] += " " + line[index:len(line)-1]
+			columns[columnName].Statement += " " + line[index:len(line)-1]
 			tables[tableName].Columns = columns
 		} else {
 			bufferLines = append(bufferLines, line)
@@ -200,6 +215,19 @@ func MapConstraints(lines []string, tables map[string]*Table) []string {
 			tableName := tokens[3]
 			constraints := tables[tableName].Constraints
 			tables[tableName].Constraints = append(constraints, line[index:len(line)-1])
+
+			// update column primary or foreign keys
+			if strings.Index(line, "PRIMARY KEY") != -1 {
+				columns := strings.Split(line[strings.Index(line, "(")+1:strings.Index(line, ")")], ", ")
+				for _, column := range columns {
+					tables[tableName].Columns[column].IsPrimaryKey = true
+				}
+			} else if strings.Index(line, "FOREIGN KEY") != -1 {
+				columns := strings.Split(line[strings.Index(line, "(")+1:strings.Index(line, ")")], ", ")
+				for _, column := range columns {
+					tables[tableName].Columns[column].IsForeignKey = true
+				}
+			}
 		} else {
 			bufferLines = append(bufferLines, line)
 		}
@@ -265,23 +293,48 @@ func SquashMultiLineStatements(lines []string) []string {
 }
 
 func printColumns(table *Table) {
-	i := 0
-	columns := make([]string, len(table.Columns))
-	for k := range table.Columns {
-		columns[i] = k
-		i++
+	primaryKeyColumns := make([]string, 0)
+	foreignKeyColumns := make([]string, 0)
+	columns := make([]string, 0)
+	for k, v := range table.Columns {
+		if v.IsPrimaryKey {
+			primaryKeyColumns = append(primaryKeyColumns, k)
+		} else if v.IsForeignKey {
+			foreignKeyColumns = append(foreignKeyColumns, k)
+		} else {
+			columns = append(columns, k)
+		}
 	}
 	sort.Strings(columns)
 
-	for _, columnName := range columns {
+	for i, columnName := range primaryKeyColumns {
 		column := table.Columns[columnName]
-		fmt.Printf("    %s %s", columnName, column)
-		if i == len(table.Columns)-1 && len(table.Constraints) == 0 {
+		fmt.Printf("    %s %s", columnName, column.Statement)
+		if i == len(primaryKeyColumns)-1 && len(foreignKeyColumns) == 0 && len(columns) == 0 && len(table.Constraints) == 0 {
 			fmt.Println()
 		} else {
 			fmt.Print(",\n")
 		}
-		i++
+	}
+
+	for i, columnName := range foreignKeyColumns {
+		column := table.Columns[columnName]
+		fmt.Printf("    %s %s", columnName, column.Statement)
+		if i == len(foreignKeyColumns)-1 && len(columns) == 0 && len(table.Constraints) == 0 {
+			fmt.Println()
+		} else {
+			fmt.Print(",\n")
+		}
+	}
+
+	for i, columnName := range columns {
+		column := table.Columns[columnName]
+		fmt.Printf("    %s %s", columnName, column.Statement)
+		if i == len(columns)-1 && len(table.Constraints) == 0 {
+			fmt.Println()
+		} else {
+			fmt.Print(",\n")
+		}
 	}
 }
 
