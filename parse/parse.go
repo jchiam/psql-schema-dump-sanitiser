@@ -30,39 +30,37 @@ func ReadLine(reader *bufio.Reader) (string, bool) {
 
 // PrintSchema prints the schema into palatable form in console output
 func PrintSchema(tables map[string]*Table) {
-	tableNames := make([]string, len(tables)-1)
-	i := 0
+	tableNames := make([]string, 0)
 	for k := range tables {
 		if k == "gorp_migrations" {
 			continue
 		}
-		tableNames[i] = k
-		i++
+		tableNames = append(tableNames, k)
 	}
 	sort.Strings(tableNames)
 
-	for _, tableName := range tableNames {
+	for i, tableName := range tableNames {
 		table := tables[tableName]
 		fmt.Printf("CREATE TABLE %s (\n", tableName)
-		i = 0
+		j := 0
 		for columnName, column := range table.Columns {
 			fmt.Printf("    %s %s", columnName, column)
-			if i == len(table.Columns)-1 && len(table.Constraints) == 0 {
+			if j == len(table.Columns)-1 && len(table.Constraints) == 0 {
 				fmt.Println()
 			} else {
 				fmt.Print(",\n")
 			}
-			i++
+			j++
 		}
-		i = 0
+		j = 0
 		for _, constraint := range table.Constraints {
 			fmt.Printf("    %s", constraint)
-			if i == len(table.Constraints)-1 {
+			if j == len(table.Constraints)-1 {
 				fmt.Println()
 			} else {
 				fmt.Print(",\n")
 			}
-			i++
+			j++
 		}
 		fmt.Println(");")
 		if len(table.Sequence) > 0 {
@@ -71,6 +69,8 @@ func PrintSchema(tables map[string]*Table) {
 		if len(table.Index) > 0 {
 			fmt.Println(table.Index)
 		}
-		fmt.Println()
+		if i < len(tableNames)-1 {
+			fmt.Println()
+		}
 	}
 }
