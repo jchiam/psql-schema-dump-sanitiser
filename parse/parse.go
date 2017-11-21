@@ -123,6 +123,34 @@ func MapDefaultValues(lines []string, tables map[string]*Table) []string {
 	return bufferLines
 }
 
+// MapIndices parses sql statements and maps index related statements to its tables
+// It then returns the remaining lines
+func MapIndices(lines []string, tables map[string]*Table) []string {
+	if len(lines) == 0 {
+		return lines
+	} else if len(tables) == 0 {
+		log.Fatal(fmt.Errorf("index statements found with no mapped tables"))
+	}
+
+	bufferLines := make([]string, 0)
+	for _, line := range lines {
+		if strings.Contains(line, "INDEX") {
+			tokens := strings.Split(line, " ")
+			tableName := ""
+			for i := range tokens {
+				if tokens[i] == "ON" {
+					tableName = tokens[i+1]
+				}
+			}
+			tables[tableName].Index = line
+		} else {
+			bufferLines = append(bufferLines, line)
+		}
+	}
+
+	return bufferLines
+}
+
 // PrintSchema prints the schema into palatable form in console output
 func PrintSchema(tables map[string]*Table) {
 	tableNames := make([]string, 0)

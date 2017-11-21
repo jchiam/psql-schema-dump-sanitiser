@@ -133,22 +133,7 @@ func main() {
 	lines = bufferLines
 
 	// 9. Map index statements to tables
-	bufferLines = make([]string, 0)
-	for _, line := range lines {
-		if strings.Contains(line, "INDEX") {
-			tokens := strings.Split(line, " ")
-			tableName := ""
-			for i := range tokens {
-				if tokens[i] == "ON" {
-					tableName = tokens[i+1]
-				}
-			}
-			tables[tableName].Index = line
-		} else {
-			bufferLines = append(bufferLines, line)
-		}
-	}
-	lines = bufferLines
+	lines = parse.MapIndices(lines, tables)
 
 	// 10. Print
 	parse.PrintSchema(tables)
