@@ -264,6 +264,39 @@ func SquashMultiLineStatements(lines []string) []string {
 	return bufferLines
 }
 
+func printColumns(table *Table) {
+	i := 0
+	for columnName, column := range table.Columns {
+		fmt.Printf("    %s %s", columnName, column)
+		if i == len(table.Columns)-1 && len(table.Constraints) == 0 {
+			fmt.Println()
+		} else {
+			fmt.Print(",\n")
+		}
+		i++
+	}
+}
+
+func printConstraints(table *Table) {
+	i := 0
+	for _, constraint := range table.Constraints {
+		fmt.Printf("    %s", constraint)
+		if i == len(table.Constraints)-1 {
+			fmt.Println()
+		} else {
+			fmt.Print(",\n")
+		}
+		i++
+	}
+}
+
+func printTable(tableName string, table *Table) {
+	fmt.Printf("CREATE TABLE %s (\n", tableName)
+	printColumns(table)
+	printConstraints(table)
+	fmt.Println(");")
+}
+
 // PrintSchema prints the schema into palatable form in console output
 func PrintSchema(tables map[string]*Table) {
 	tableNames := make([]string, 0)
@@ -277,28 +310,7 @@ func PrintSchema(tables map[string]*Table) {
 
 	for i, tableName := range tableNames {
 		table := tables[tableName]
-		fmt.Printf("CREATE TABLE %s (\n", tableName)
-		j := 0
-		for columnName, column := range table.Columns {
-			fmt.Printf("    %s %s", columnName, column)
-			if j == len(table.Columns)-1 && len(table.Constraints) == 0 {
-				fmt.Println()
-			} else {
-				fmt.Print(",\n")
-			}
-			j++
-		}
-		j = 0
-		for _, constraint := range table.Constraints {
-			fmt.Printf("    %s", constraint)
-			if j == len(table.Constraints)-1 {
-				fmt.Println()
-			} else {
-				fmt.Print(",\n")
-			}
-			j++
-		}
-		fmt.Println(");")
+		printTable(tableName, table)
 		if len(table.Sequence) > 0 {
 			fmt.Println(table.Sequence)
 		}
