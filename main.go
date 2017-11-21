@@ -2,21 +2,13 @@ package main
 
 import (
 	"bufio"
-	"fmt"
-	"io"
 	"log"
 	"os"
 	"regexp"
-	"sort"
 	"strings"
-)
 
-type table struct {
-	Columns     map[string]string
-	Constraints []string
-	Sequence    string
-	Index       string
-}
+	"github.com/psql-schema-dump-sanitiser.git/parse"
+)
 
 func main() {
 	if len(os.Args)-1 == 0 {
@@ -37,7 +29,7 @@ func main() {
 	var bufferLines []string
 	// read file by line till EOF
 	for {
-		line, eof := readLine(reader)
+		line, eof := parse.ReadLine(reader)
 		if eof {
 			break
 		}
@@ -58,7 +50,7 @@ func main() {
 		if strings.Contains(line, "CREATE SEQUENCE") {
 			seqLine := line
 			for line[len(line)-1] != ';' {
-				line, eof = readLine(reader)
+				line, eof = parse.ReadLine(reader)
 				seqLine = seqLine + " " + strings.Trim(line, " ")
 			}
 
@@ -97,12 +89,12 @@ func main() {
 
 	// 4. Group and map table statements
 	bufferLines = make([]string, 0)
-	tables := make(map[string]*table)
+	tables := make(map[string]*parse.Table)
 	for i := 0; i < len(lines); i++ {
 		line := lines[i]
 		if strings.Contains(line, "CREATE TABLE") {
 			tableName := strings.Split(line, " ")[2]
-			table := table{
+			table := parse.Table{
 				Columns:     make(map[string]string),
 				Constraints: make([]string, 0),
 			}
@@ -228,62 +220,5 @@ func main() {
 	lines = bufferLines
 
 	// 9. Print
-	printSchema(tables)
-}
-
-func readLine(reader *bufio.Reader) (string, bool) {
-	lineBytes, _, err := reader.ReadLine()
-	if err != nil {
-		if err != io.EOF {
-			log.Fatal(err)
-		}
-		return "", true
-	}
-	return string(lineBytes), false
-}
-
-func printSchema(tables map[string]*table) {
-	tableNames := make([]string, len(tables)-1)
-	i := 0
-	for k := range tables {
-		if k == "gorp_migrations" {
-			continue
-		}
-		tableNames[i] = k
-		i++
-	}
-	sort.Strings(tableNames)
-
-	for _, tableName := range tableNames {
-		table := tables[tableName]
-		fmt.Printf("CREATE TABLE %s (\n", tableName)
-		i = 0
-		for columnName, column := range table.Columns {
-			fmt.Printf("    %s %s", columnName, column)
-			if i == len(table.Columns)-1 && len(table.Constraints) == 0 {
-				fmt.Println()
-			} else {
-				fmt.Print(",\n")
-			}
-			i++
-		}
-		i = 0
-		for _, constraint := range table.Constraints {
-			fmt.Printf("    %s", constraint)
-			if i == len(table.Constraints)-1 {
-				fmt.Println()
-			} else {
-				fmt.Print(",\n")
-			}
-			i++
-		}
-		fmt.Println(");")
-		if len(table.Sequence) > 0 {
-			fmt.Println(table.Sequence)
-		}
-		if len(table.Index) > 0 {
-			fmt.Println(table.Index)
-		}
-		fmt.Println()
-	}
+	parse.PrintSchema(tables)
 }
