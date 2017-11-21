@@ -266,7 +266,15 @@ func SquashMultiLineStatements(lines []string) []string {
 
 func printColumns(table *Table) {
 	i := 0
-	for columnName, column := range table.Columns {
+	columns := make([]string, len(table.Columns))
+	for k := range table.Columns {
+		columns[i] = k
+		i++
+	}
+	sort.Strings(columns)
+
+	for _, columnName := range columns {
+		column := table.Columns[columnName]
 		fmt.Printf("    %s %s", columnName, column)
 		if i == len(table.Columns)-1 && len(table.Constraints) == 0 {
 			fmt.Println()
