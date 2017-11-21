@@ -2,6 +2,7 @@ package main
 
 import (
 	"bufio"
+	"fmt"
 	"log"
 	"os"
 	"strings"
@@ -65,6 +66,10 @@ func main() {
 
 	// 8. Map index statements to tables
 	lines = parse.MapIndices(lines, tables)
+
+	if len(lines) != 0 {
+		log.Fatal(fmt.Errorf("%d unprocessed lines remaining", len(lines)))
+	}
 
 	// 9. Print
 	parse.PrintSchema(tables)
