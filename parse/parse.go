@@ -360,21 +360,57 @@ func printTable(tableName string, table *Table) {
 	fmt.Println(");")
 }
 
-func buildTableGraph(tables map[string]*Table) {
-	graph := goraph.NewGraph()
+func getReferenceTable(tableName string, tables map[string]*Table) []string {
+	refTables := make([]string, 0)
+	for _, constraint := range tables[tableName].Constraints {
+		if strings.Contains(constraint, "FOREIGN KEY") {
+			tokens := strings.Split(constraint, "REFERENCES ")
+			refTables = append(refTables, tokens[1][:strings.Index(tokens[1], "(")])
+		}
+	}
+	return refTables
 }
 
-// PrintSchema prints the schema into palatable form in console output
-func PrintSchema(tables map[string]*Table) {
-	tableNames := make([]string, 0)
+// Sort tables topologically
+func sortTables(tables map[string]*Table) []string {
+	graph := goraph.NewGraph()
+	nodeIDs := make(map[string]goraph.ID)
+
+	// create nodes and populate graph
 	for k := range tables {
 		if k == "gorp_migrations" {
 			continue
 		}
-		tableNames = append(tableNames, k)
+		node := goraph.NewNode(k)
+		nodeIDs[k] = node.ID()
+		graph.AddNode(goraph.NewNode(k))
 	}
-	sort.Strings(tableNames)
 
+	// populate graph with edges
+	nodes := graph.GetNodes()
+	for id := range nodes {
+		refTables := getReferenceTable(id.String(), tables)
+		for _, ref := range refTables {
+			graph.AddEdge(nodeIDs[ref], id, 0)
+		}
+	}
+
+	IDs, isDAG := goraph.TopologicalSort(graph)
+	if !isDAG {
+		log.Fatal(fmt.Errorf("error in sorting tables"))
+	}
+	sortedTableNames := make([]string, len(IDs))
+	i := 0
+	for _, id := range IDs {
+		sortedTableNames[i] = id.String()
+		i++
+	}
+	return sortedTableNames
+}
+
+// PrintSchema prints the schema into palatable form in console output
+func PrintSchema(tables map[string]*Table) {
+	tableNames := sortTables(tables)
 	for i, tableName := range tableNames {
 		table := tables[tableName]
 		printTable(tableName, table)
