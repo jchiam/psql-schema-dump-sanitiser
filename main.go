@@ -90,24 +90,8 @@ func main() {
 	// 4. Group and map table statements
 	tables, lines := parse.MapTables(lines)
 
-	// 5. Combine create sequence and alter sequence owned by
-	bufferLines = make([]string, 0)
-	for i, line := range lines {
-		if strings.Contains(line, "CREATE SEQUENCE") {
-			seqName := strings.Split(line, " ")[2]
-			seqName = seqName[:len(seqName)-1]
-			if strings.Contains(lines[i+1], "ALTER SEQUENCE "+seqName) {
-				ownedBy := strings.Split(lines[i+1], " ")[5]
-				seqTable := strings.Split(ownedBy, ".")[0]
-				tables[seqTable].Sequence = line[:len(line)-1] + " OWNED BY " + ownedBy
-			}
-		} else if strings.Contains(line, "ALTER SEQUENCE") && strings.Contains(line, "OWNED BY") {
-			continue
-		} else {
-			bufferLines = append(bufferLines, line)
-		}
-	}
-	lines = bufferLines
+	// 5. Squash sequence statements into create sequence statements and map to tables
+	lines = parse.MapSequences(lines, tables)
 
 	// 6. Squash remaining statements to single line
 	bufferLines = make([]string, 0)

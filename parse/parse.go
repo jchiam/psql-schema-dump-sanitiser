@@ -57,6 +57,35 @@ func MapTables(lines []string) (map[string]*Table, []string) {
 	return tables, bufferLines
 }
 
+// MapSequences parses sql statements and squashes them into a single create sequence statement.
+// It then returns the remaining lines
+func MapSequences(lines []string, tables map[string]*Table) []string {
+	if len(lines) == 0 {
+		return lines
+	} else if len(tables) == 0 {
+		log.Fatal(fmt.Errorf("sequence statements found with no mapped tables"))
+	}
+
+	bufferLines := make([]string, 0)
+	for i, line := range lines {
+		if strings.Contains(line, "CREATE SEQUENCE") {
+			seqName := strings.Split(line, " ")[2]
+			seqName = seqName[:len(seqName)-1]
+			if strings.Contains(lines[i+1], "ALTER SEQUENCE "+seqName) {
+				ownedBy := strings.Split(lines[i+1], " ")[5]
+				seqTable := strings.Split(ownedBy, ".")[0]
+				tables[seqTable].Sequence = line[:len(line)-1] + " OWNED BY " + ownedBy
+			}
+		} else if strings.Contains(line, "ALTER SEQUENCE") && strings.Contains(line, "OWNED BY") {
+			continue
+		} else {
+			bufferLines = append(bufferLines, line)
+		}
+	}
+
+	return bufferLines
+}
+
 // PrintSchema prints the schema into palatable form in console output
 func PrintSchema(tables map[string]*Table) {
 	tableNames := make([]string, 0)
