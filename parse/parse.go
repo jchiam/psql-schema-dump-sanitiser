@@ -123,6 +123,31 @@ func MapDefaultValues(lines []string, tables map[string]*Table) []string {
 	return bufferLines
 }
 
+// MapConstraints parses sql statements and maps constraint related statements to its tables
+// It then returns the remaining lines
+func MapConstraints(lines []string, tables map[string]*Table) []string {
+	if len(lines) == 0 {
+		return lines
+	} else if len(tables) == 0 {
+		log.Fatal(fmt.Errorf("index statements found with no mapped tables"))
+	}
+
+	bufferLines := make([]string, 0)
+	for _, line := range lines {
+		index := strings.Index(line, "CONSTRAINT")
+		if index != -1 {
+			tokens := strings.Split(line, " ")
+			tableName := tokens[3]
+			constraints := tables[tableName].Constraints
+			tables[tableName].Constraints = append(constraints, line[index:len(line)-1])
+		} else {
+			bufferLines = append(bufferLines, line)
+		}
+	}
+
+	return bufferLines
+}
+
 // MapIndices parses sql statements and maps index related statements to its tables
 // It then returns the remaining lines
 func MapIndices(lines []string, tables map[string]*Table) []string {
