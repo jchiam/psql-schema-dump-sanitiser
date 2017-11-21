@@ -8,6 +8,8 @@ import (
 	"regexp"
 	"sort"
 	"strings"
+
+	"github.com/gyuho/goraph"
 )
 
 // Column is the struct containing logical aspects of a table column
@@ -356,6 +358,10 @@ func printTable(tableName string, table *Table) {
 	printColumns(table)
 	printConstraints(table)
 	fmt.Println(");")
+}
+
+func buildTableGraph(tables map[string]*Table) {
+	graph := goraph.NewGraph()
 }
 
 // PrintSchema prints the schema into palatable form in console output
