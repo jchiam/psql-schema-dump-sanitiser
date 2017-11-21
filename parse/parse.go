@@ -18,7 +18,7 @@ type Table struct {
 	Index       string
 }
 
-// Checks if line is a redundant sql statement or comment
+// IsRedundant checks if line is a redundant sql statement or comment
 func IsRedundant(line string) bool {
 	if len(line) == 0 {
 		return true

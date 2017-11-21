@@ -39,28 +39,28 @@ func main() {
 		lines = append(lines, line)
 	}
 
-	// 3. Group and map table statements
+	// 2. Group and map table statements
 	tables, lines := parse.MapTables(lines)
 
-	// 4. Squash any multi-line statements to single line
+	// 3. Squash any multi-line statements to single line
 	lines = parse.SquashMultiLineStatements(lines)
 
-	// 5. Squash sequence statements into create sequence statements and map to tables
+	// 4. Squash sequence statements into create sequence statements and map to tables
 	lines = parse.MapSequences(lines, tables)
 
-	// 6. Add default values to columns
+	// 5. Add default values to columns
 	lines = parse.MapDefaultValues(lines, tables)
 
-	// 7. Map constraint statements to tables
+	// 6. Map constraint statements to tables
 	lines = parse.MapConstraints(lines, tables)
 
-	// 8. Map index statements to tables
+	// 7. Map index statements to tables
 	lines = parse.MapIndices(lines, tables)
 
 	if len(lines) != 0 {
 		log.Fatal(fmt.Errorf("%d unprocessed lines remaining", len(lines)))
 	}
 
-	// 9. Print
+	// 8. Print
 	parse.PrintSchema(tables)
 }
