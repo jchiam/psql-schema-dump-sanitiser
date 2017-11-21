@@ -5,6 +5,7 @@ import (
 	"fmt"
 	"io"
 	"log"
+	"regexp"
 	"sort"
 	"strings"
 )
@@ -57,6 +58,41 @@ func MapTables(lines []string) (map[string]*Table, []string) {
 	return tables, bufferLines
 }
 
+func simplifyCreateSequenceStatement(stmt string) string {
+	if len(stmt) == 0 || !strings.Contains(stmt, "CREATE SEQUENCE") {
+		return stmt
+	}
+
+	index := strings.Index(stmt, "START WITH 1")
+	if index != -1 {
+		stmt = stmt[:index] + stmt[index+len("START WITH 1"):]
+	}
+	index = strings.Index(stmt, "INCREMENT BY 1")
+	if index != -1 {
+		stmt = stmt[:index] + stmt[index+len("INCREMENT BY 1"):]
+	}
+	index = strings.Index(stmt, "NO MINVALUE")
+	if index != -1 {
+		stmt = stmt[:index] + stmt[index+len("NO MINVALUE"):]
+	}
+	index = strings.Index(stmt, "NO MAXVALUE")
+	if index != -1 {
+		stmt = stmt[:index] + stmt[index+len("NO MAXVALUE"):]
+	}
+	index = strings.Index(stmt, "CACHE 1")
+	if index != -1 {
+		stmt = stmt[:index] + stmt[index+len("CACHE 1"):]
+	}
+
+	multipleWhiteSpaceExp := regexp.MustCompile(`[\s]{2,}`)
+	stmt = multipleWhiteSpaceExp.ReplaceAllString(stmt, " ")
+
+	spacesBeforeSemicolon := regexp.MustCompile(`[\s]{1,};`)
+	stmt = spacesBeforeSemicolon.ReplaceAllString(stmt, ";")
+
+	return stmt
+}
+
 // MapSequences parses sql statements and squashes them into a single create sequence statement.
 // It then returns the remaining lines
 func MapSequences(lines []string, tables map[string]*Table) []string {
@@ -69,8 +105,13 @@ func MapSequences(lines []string, tables map[string]*Table) []string {
 	bufferLines := make([]string, 0)
 	for i, line := range lines {
 		if strings.Contains(line, "CREATE SEQUENCE") {
+			line = simplifyCreateSequenceStatement(line)
+
 			seqName := strings.Split(line, " ")[2]
-			seqName = seqName[:len(seqName)-1]
+			if seqName[len(seqName)-1] == ';' {
+				seqName = seqName[:len(seqName)-1]
+			}
+
 			if strings.Contains(lines[i+1], "ALTER SEQUENCE "+seqName) {
 				ownedBy := strings.Split(lines[i+1], " ")[5]
 				seqTable := strings.Split(ownedBy, ".")[0]
