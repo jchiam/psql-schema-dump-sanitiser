@@ -88,36 +88,7 @@ func main() {
 	}
 
 	// 4. Group and map table statements
-	bufferLines = make([]string, 0)
-	tables := make(map[string]*parse.Table)
-	for i := 0; i < len(lines); i++ {
-		line := lines[i]
-		if strings.Contains(line, "CREATE TABLE") {
-			tableName := strings.Split(line, " ")[2]
-			table := parse.Table{
-				Columns:     make(map[string]string),
-				Constraints: make([]string, 0),
-			}
-
-			j := i + 1
-			for ; lines[j][len(lines[j])-1] != ';'; j++ {
-				columnLine := strings.Trim(lines[j], " ")
-				spaceIndex := strings.Index(columnLine, " ")
-				columnName := columnLine[:spaceIndex]
-				if columnLine[len(columnLine)-1] == ',' {
-					table.Columns[columnName] = columnLine[spaceIndex+1 : len(columnLine)-1]
-				} else {
-					table.Columns[columnName] = columnLine[spaceIndex+1:]
-				}
-			}
-
-			tables[tableName] = &table
-			i = j
-		} else {
-			bufferLines = append(bufferLines, line)
-		}
-	}
-	lines = bufferLines
+	tables, lines := parse.MapTables(lines)
 
 	// 5. Combine create sequence and alter sequence owned by
 	bufferLines = make([]string, 0)
@@ -219,6 +190,6 @@ func main() {
 	}
 	lines = bufferLines
 
-	// 9. Print
+	// 10. Print
 	parse.PrintSchema(tables)
 }
