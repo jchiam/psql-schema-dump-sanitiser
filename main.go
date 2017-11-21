@@ -115,31 +115,7 @@ func main() {
 	lines = bufferLines
 
 	// 7. Add default values to columns
-	bufferLines = make([]string, 0)
-	for _, line := range lines {
-		index := strings.Index(line, "DEFAULT nextval")
-		if index != -1 {
-			tokens := strings.Split(line, " ")
-			var tableName, columnName string
-			if tokens[2] == "ONLY" {
-				tableName = tokens[3]
-			} else {
-				tableName = tokens[2]
-			}
-			for i := range tokens {
-				if tokens[i] == "ALTER" && tokens[i+1] == "COLUMN" {
-					columnName = tokens[i+2]
-					break
-				}
-			}
-			columns := tables[tableName].Columns
-			columns[columnName] += " " + line[index:len(line)-1]
-			tables[tableName].Columns = columns
-		} else {
-			bufferLines = append(bufferLines, line)
-		}
-	}
-	lines = bufferLines
+	lines = parse.MapDefaultValues(lines, tables)
 
 	// 8. Map constraint statements to tables
 	bufferLines = make([]string, 0)

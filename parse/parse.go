@@ -86,6 +86,43 @@ func MapSequences(lines []string, tables map[string]*Table) []string {
 	return bufferLines
 }
 
+// MapDefaultValues parses sql statements and maps default value related statements to its column in tables
+// It then returns the remaining lines
+func MapDefaultValues(lines []string, tables map[string]*Table) []string {
+	if len(lines) == 0 {
+		return lines
+	} else if len(tables) == 0 {
+		log.Fatal(fmt.Errorf("index statements found with no mapped tables"))
+	}
+
+	bufferLines := make([]string, 0)
+	for _, line := range lines {
+		index := strings.Index(line, "DEFAULT nextval")
+		if index != -1 {
+			tokens := strings.Split(line, " ")
+			var tableName, columnName string
+			if tokens[2] == "ONLY" {
+				tableName = tokens[3]
+			} else {
+				tableName = tokens[2]
+			}
+			for i := range tokens {
+				if tokens[i] == "ALTER" && tokens[i+1] == "COLUMN" {
+					columnName = tokens[i+2]
+					break
+				}
+			}
+			columns := tables[tableName].Columns
+			columns[columnName] += " " + line[index:len(line)-1]
+			tables[tableName].Columns = columns
+		} else {
+			bufferLines = append(bufferLines, line)
+		}
+	}
+
+	return bufferLines
+}
+
 // PrintSchema prints the schema into palatable form in console output
 func PrintSchema(tables map[string]*Table) {
 	tableNames := make([]string, 0)
