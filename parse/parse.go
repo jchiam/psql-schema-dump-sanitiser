@@ -176,6 +176,34 @@ func MapIndices(lines []string, tables map[string]*Table) []string {
 	return bufferLines
 }
 
+// SquashMultiLineStatements squashes any multi-line sql statements to a single line
+func SquashMultiLineStatements(lines []string) []string {
+	if len(lines) == 0 {
+		return lines
+	}
+
+	bufferLines := make([]string, 0)
+	for i := 0; i < len(lines); i++ {
+		line := lines[i]
+		if line[len(line)-1] != ';' {
+			bufferLine := line
+			j := i + 1
+			for ; lines[j][len(lines[j])-1] != ';'; j++ {
+				bufferLine = bufferLine + " " + strings.Trim(lines[j], " ")
+			}
+			if j < len(lines) {
+				bufferLine = bufferLine + " " + strings.Trim(lines[j], " ")
+			}
+			bufferLines = append(bufferLines, bufferLine)
+			i = j
+		} else {
+			bufferLines = append(bufferLines, line)
+		}
+	}
+
+	return bufferLines
+}
+
 // PrintSchema prints the schema into palatable form in console output
 func PrintSchema(tables map[string]*Table) {
 	tableNames := make([]string, 0)

@@ -94,25 +94,7 @@ func main() {
 	lines = parse.MapSequences(lines, tables)
 
 	// 6. Squash remaining statements to single line
-	bufferLines = make([]string, 0)
-	for i := 0; i < len(lines); i++ {
-		line := lines[i]
-		if line[len(line)-1] != ';' {
-			bufferLine := line
-			j := i + 1
-			for ; lines[j][len(lines[j])-1] != ';'; j++ {
-				bufferLine = bufferLine + " " + strings.Trim(lines[j], " ")
-			}
-			if j < len(lines) {
-				bufferLine = bufferLine + " " + strings.Trim(lines[j], " ")
-			}
-			bufferLines = append(bufferLines, bufferLine)
-			i = j
-		} else {
-			bufferLines = append(bufferLines, line)
-		}
-	}
-	lines = bufferLines
+	lines = parse.SquashMultiLineStatements(lines)
 
 	// 7. Add default values to columns
 	lines = parse.MapDefaultValues(lines, tables)
