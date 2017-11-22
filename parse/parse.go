@@ -28,7 +28,7 @@ type Sequence struct {
 // Table is the struct containing logical aspects of a psql table's structure
 type Table struct {
 	Columns     map[string]*Column
-	Constraints []string
+	Constraints map[string]string
 	Sequences   []*Sequence
 	Index       string
 }
@@ -67,7 +67,7 @@ func MapTables(lines []string) (map[string]*Table, []string) {
 			tableName := strings.Split(line, " ")[2]
 			table := Table{
 				Columns:     make(map[string]*Column),
-				Constraints: make([]string, 0),
+				Constraints: make(map[string]string),
 				Sequences:   make([]*Sequence, 0),
 			}
 
@@ -229,8 +229,8 @@ func MapConstraints(lines []string, tables map[string]*Table) []string {
 		if index != -1 {
 			tokens := strings.Split(line, " ")
 			tableName := tokens[3]
-			constraints := tables[tableName].Constraints
-			tables[tableName].Constraints = append(constraints, line[index:len(line)-1])
+			constraintName := tokens[6]
+			tables[tableName].Constraints[constraintName] = line[index : len(line)-1]
 
 			// update column primary or foreign keys
 			if strings.Index(line, "PRIMARY KEY") != -1 {
@@ -321,6 +321,8 @@ func printColumns(table *Table) {
 			columns = append(columns, k)
 		}
 	}
+	sort.Strings(primaryKeyColumns)
+	sort.Strings(foreignKeyColumns)
 	sort.Strings(columns)
 
 	for i, columnName := range primaryKeyColumns {
@@ -356,8 +358,15 @@ func printColumns(table *Table) {
 
 func printConstraints(table *Table) {
 	i := 0
-	for _, constraint := range table.Constraints {
-		fmt.Printf("    %s", constraint)
+	constraintNames := make([]string, len(table.Constraints))
+	for name := range table.Constraints {
+		constraintNames[i] = name
+		i++
+	}
+	sort.Strings(constraintNames)
+
+	for i, constraint := range constraintNames {
+		fmt.Printf("    %s", table.Constraints[constraint])
 		if i == len(table.Constraints)-1 {
 			fmt.Println()
 		} else {
