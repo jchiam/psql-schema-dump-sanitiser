@@ -19,11 +19,17 @@ type Column struct {
 	IsForeignKey bool
 }
 
+// Sequence holds the create and relation statements of a table
+type Sequence struct {
+	Create   string
+	Relation string
+}
+
 // Table is the struct containing logical aspects of a psql table's structure
 type Table struct {
 	Columns     map[string]*Column
 	Constraints []string
-	Sequence    string
+	Sequences   []*Sequence
 	Index       string
 }
 
@@ -62,6 +68,7 @@ func MapTables(lines []string) (map[string]*Table, []string) {
 			table := Table{
 				Columns:     make(map[string]*Column),
 				Constraints: make([]string, 0),
+				Sequences:   make([]*Sequence, 0),
 			}
 
 			j := i + 1
@@ -130,7 +137,8 @@ func simplifyCreateSequenceStatement(stmt string) string {
 }
 
 // MapSequences parses sql statements and squashes them into a single create sequence statement.
-// It then returns the remaining lines
+// It then returns the remaining lines.
+// Note: Assumes relation statement is always after create statement.
 func MapSequences(lines []string, tables map[string]*Table) []string {
 	if len(lines) == 0 {
 		return lines
@@ -141,7 +149,7 @@ func MapSequences(lines []string, tables map[string]*Table) []string {
 	bufferLines := make([]string, 0)
 	for i, line := range lines {
 		if strings.Contains(line, "CREATE SEQUENCE") {
-			line = simplifyCreateSequenceStatement(line)
+			createSeq := simplifyCreateSequenceStatement(line)
 
 			seqName := strings.Split(line, " ")[2]
 			if seqName[len(seqName)-1] == ';' {
@@ -149,9 +157,15 @@ func MapSequences(lines []string, tables map[string]*Table) []string {
 			}
 
 			if strings.Contains(lines[i+1], "ALTER SEQUENCE "+seqName) {
-				ownedBy := strings.Split(lines[i+1], " ")[5]
+				alterSeq := lines[i+1]
+				ownedBy := strings.Split(alterSeq, " ")[5]
 				seqTable := strings.Split(ownedBy, ".")[0]
-				tables[seqTable].Sequence = line[:len(line)-1] + " OWNED BY " + ownedBy
+
+				sequence := &Sequence{
+					Create:   createSeq,
+					Relation: alterSeq,
+				}
+				tables[seqTable].Sequences = append(tables[seqTable].Sequences, sequence)
 			}
 		} else if strings.Contains(line, "ALTER SEQUENCE") && strings.Contains(line, "OWNED BY") {
 			continue
@@ -413,9 +427,16 @@ func PrintSchema(tables map[string]*Table) {
 	tableNames := sortTables(tables)
 	for i, tableName := range tableNames {
 		table := tables[tableName]
-		printTable(tableName, table)
-		if len(table.Sequence) > 0 {
-			fmt.Println(table.Sequence)
+		if len(table.Sequences) > 0 {
+			for _, seq := range table.Sequences {
+				fmt.Println(seq.Create)
+			}
+			printTable(tableName, table)
+			for _, seq := range table.Sequences {
+				fmt.Println(seq.Relation)
+			}
+		} else {
+			printTable(tableName, table)
 		}
 		if len(table.Index) > 0 {
 			fmt.Println(table.Index)
