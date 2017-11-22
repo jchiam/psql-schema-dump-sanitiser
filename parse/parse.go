@@ -9,7 +9,7 @@ import (
 	"sort"
 	"strings"
 
-	"github.com/gyuho/goraph"
+	"github.com/psql-schema-dump-sanitiser.git/graph"
 )
 
 // Column is the struct containing logical aspects of a table column
@@ -374,7 +374,7 @@ func printTable(tableName string, table *Table) {
 	fmt.Println(");")
 }
 
-func getReferenceTable(tableName string, tables map[string]*Table) []string {
+func getReferenceTables(tableName string, tables map[string]*Table) []string {
 	refTables := make([]string, 0)
 	for _, constraint := range tables[tableName].Constraints {
 		if strings.Contains(constraint, "FOREIGN KEY") {
@@ -387,39 +387,54 @@ func getReferenceTable(tableName string, tables map[string]*Table) []string {
 
 // Sort tables topologically
 func sortTables(tables map[string]*Table) []string {
-	graph := goraph.NewGraph()
-	nodeIDs := make(map[string]goraph.ID)
+	nodes := make(map[string]*graph.Node)
 
-	// create nodes and populate graph
-	for k := range tables {
-		if k == "gorp_migrations" {
+	// create nodes
+	for name := range tables {
+		if name == "gorp_migrations" {
 			continue
 		}
-		node := goraph.NewNode(k)
-		nodeIDs[k] = node.ID()
-		graph.AddNode(goraph.NewNode(k))
-	}
-
-	// populate graph with edges
-	nodes := graph.GetNodes()
-	for id := range nodes {
-		refTables := getReferenceTable(id.String(), tables)
-		for _, ref := range refTables {
-			graph.AddEdge(nodeIDs[ref], id, 0)
+		nodes[name] = &graph.Node{
+			ID:       name,
+			Parents:  make(map[string]*graph.Node),
+			Children: make(map[string]*graph.Node),
 		}
 	}
 
-	IDs, isDAG := goraph.TopologicalSort(graph)
-	if !isDAG {
-		log.Fatal(fmt.Errorf("error in sorting tables"))
+	// add edges
+	for id, node := range nodes {
+		parents := getReferenceTables(id, tables)
+		for _, parent := range parents {
+			node.Parents[parent] = nodes[parent]
+			nodes[parent].Children[id] = node
+		}
 	}
-	sortedTableNames := make([]string, len(IDs))
+
 	i := 0
-	for _, id := range IDs {
-		sortedTableNames[i] = id.String()
-		i++
+	sortedNodeIDs := make([]string, len(nodes))
+	for len(nodes) > 0 {
+		rootNodeIDs := make([]string, 0)
+		for id, node := range nodes {
+			if len(node.Parents) == 0 {
+				rootNodeIDs = append(rootNodeIDs, id)
+			}
+		}
+
+		if len(rootNodeIDs) == 0 {
+			log.Fatal(fmt.Errorf("graph is not a dag"))
+		}
+
+		sort.Strings(rootNodeIDs)
+		for _, id := range rootNodeIDs {
+			for _, childNode := range nodes[id].Children {
+				delete(childNode.Parents, id)
+			}
+			delete(nodes, id)
+			sortedNodeIDs[i] = id
+			i++
+		}
 	}
-	return sortedTableNames
+	return sortedNodeIDs
 }
 
 // PrintSchema prints the schema into palatable form in console output
