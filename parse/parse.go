@@ -60,7 +60,7 @@ func MapTables(lines []string) (map[string]*Table, []string) {
 		return tables, lines
 	}
 
-	bufferLines := make([]string, 0)
+	var bufferLines []string
 	for i := 0; i < len(lines); i++ {
 		line := lines[i]
 		if strings.Contains(line, "CREATE TABLE") {
@@ -68,7 +68,6 @@ func MapTables(lines []string) (map[string]*Table, []string) {
 			table := Table{
 				Columns:     make(map[string]*Column),
 				Constraints: make(map[string]string),
-				Sequences:   make([]*Sequence, 0),
 			}
 
 			j := i + 1
@@ -146,7 +145,7 @@ func MapSequences(lines []string, tables map[string]*Table) []string {
 		log.Fatal(fmt.Errorf("sequence statements found with no mapped tables"))
 	}
 
-	bufferLines := make([]string, 0)
+	var bufferLines []string
 	for i, line := range lines {
 		if strings.Contains(line, "CREATE SEQUENCE") {
 			createSeq := simplifyCreateSequenceStatement(line)
@@ -186,7 +185,7 @@ func MapDefaultValues(lines []string, tables map[string]*Table) []string {
 		log.Fatal(fmt.Errorf("index statements found with no mapped tables"))
 	}
 
-	bufferLines := make([]string, 0)
+	var bufferLines []string
 	for _, line := range lines {
 		index := strings.Index(line, "DEFAULT nextval")
 		if index != -1 {
@@ -223,7 +222,7 @@ func MapConstraints(lines []string, tables map[string]*Table) []string {
 		log.Fatal(fmt.Errorf("index statements found with no mapped tables"))
 	}
 
-	bufferLines := make([]string, 0)
+	var bufferLines []string
 	for _, line := range lines {
 		index := strings.Index(line, "CONSTRAINT")
 		if index != -1 {
@@ -261,7 +260,7 @@ func MapIndices(lines []string, tables map[string]*Table) []string {
 		log.Fatal(fmt.Errorf("index statements found with no mapped tables"))
 	}
 
-	bufferLines := make([]string, 0)
+	var bufferLines []string
 	for _, line := range lines {
 		if strings.Contains(line, "INDEX") {
 			tokens := strings.Split(line, " ")
@@ -286,7 +285,7 @@ func SquashMultiLineStatements(lines []string) []string {
 		return lines
 	}
 
-	bufferLines := make([]string, 0)
+	var bufferLines []string
 	for i := 0; i < len(lines); i++ {
 		line := lines[i]
 		if line[len(line)-1] != ';' {
@@ -309,9 +308,7 @@ func SquashMultiLineStatements(lines []string) []string {
 }
 
 func printColumns(table *Table) {
-	primaryKeyColumns := make([]string, 0)
-	foreignKeyColumns := make([]string, 0)
-	columns := make([]string, 0)
+	var primaryKeyColumns, foreignKeyColumns, columns []string
 	for k, v := range table.Columns {
 		if v.IsPrimaryKey {
 			primaryKeyColumns = append(primaryKeyColumns, k)
@@ -384,7 +381,7 @@ func printTable(tableName string, table *Table) {
 }
 
 func getReferenceTables(tableName string, tables map[string]*Table) []string {
-	refTables := make([]string, 0)
+	var refTables []string
 	for _, constraint := range tables[tableName].Constraints {
 		if strings.Contains(constraint, "FOREIGN KEY") {
 			tokens := strings.Split(constraint, "REFERENCES ")
@@ -422,7 +419,7 @@ func sortTables(tables map[string]*Table) []string {
 	i := 0
 	sortedNodeIDs := make([]string, len(nodes))
 	for len(nodes) > 0 {
-		rootNodeIDs := make([]string, 0)
+		var rootNodeIDs []string
 		for id, node := range nodes {
 			if len(node.Parents) == 0 {
 				rootNodeIDs = append(rootNodeIDs, id)

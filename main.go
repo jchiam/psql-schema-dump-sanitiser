@@ -24,7 +24,7 @@ func main() {
 	defer file.Close()
 	reader := bufio.NewReader(file)
 
-	lines := make([]string, 0)
+	var lines []string
 	// read file by line till EOF
 	for {
 		line, eof := parse.ReadLine(reader)
