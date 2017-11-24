@@ -1,6 +1,7 @@
 package parse
 
 import (
+	"fmt"
 	"testing"
 
 	"github.com/google/go-cmp/cmp"
@@ -121,6 +122,95 @@ func TestMapTables(t *testing.T) {
 	for _, test := range tests {
 		tables, lines := MapTables(test.input)
 		if !similarTables(tables, test.expectedTables) {
+			t.Error(test.name + " - tables error")
+		} else if !similarLines(lines, test.expectedLines) {
+			t.Error(test.name + " - lines error")
+		}
+	}
+}
+
+func TestMapSequences(t *testing.T) {
+	expectedTable1 := &Table{
+		Sequences: []*Sequence{
+			&Sequence{
+				Create:   "CREATE SEQUENCE seq;",
+				Relation: "ALTER SEQUENCE seq OWNED BY table1.col;",
+			},
+		},
+	}
+	expectedTable2 := &Table{
+		Sequences: []*Sequence{
+			&Sequence{
+				Create:   "CREATE SEQUENCE seq START WITH 2 CACHE 2;",
+				Relation: "ALTER SEQUENCE seq OWNED BY table1.col;",
+			},
+		},
+	}
+	expectedTablesMap1 := map[string]*Table{"table1": expectedTable1}
+	expectedTablesMap2 := map[string]*Table{"table1": expectedTable2}
+
+	tests := []struct {
+		name           string
+		inputLines     []string
+		inputTables    map[string]*Table
+		expectedTables map[string]*Table
+		expectedLines  []string
+		expectedError  error
+	}{
+		{
+			name:           "No input",
+			inputLines:     []string{},
+			inputTables:    map[string]*Table{"table1": &Table{}},
+			expectedTables: map[string]*Table{"table1": &Table{}},
+			expectedLines:  []string{},
+			expectedError:  nil,
+		},
+		{
+			name:           "No table",
+			inputLines:     []string{"CREATE SEQUENCE seq START WITH 1 INCREMENT BY 1 NO MINVALUE NO MAXVALUE CACHE 1;", "ALTER SEQUENCE seq OWNED BY table1.col;"},
+			inputTables:    map[string]*Table{},
+			expectedTables: map[string]*Table{},
+			expectedLines:  []string{"CREATE SEQUENCE seq START WITH 1 INCREMENT BY 1 NO MINVALUE NO MAXVALUE CACHE 1;", "ALTER SEQUENCE seq OWNED BY table1.col;"},
+			expectedError:  fmt.Errorf("sequence statements found with no mapped tables"),
+		},
+		{
+			name:           "Sequence statements with default flags",
+			inputLines:     []string{"CREATE SEQUENCE seq START WITH 1 INCREMENT BY 1 NO MINVALUE NO MAXVALUE CACHE 1;", "ALTER SEQUENCE seq OWNED BY table1.col;"},
+			inputTables:    map[string]*Table{"table1": &Table{}},
+			expectedTables: expectedTablesMap1,
+			expectedLines:  []string{},
+			expectedError:  nil,
+		},
+		{
+			name:           "Sequence statements without default flags",
+			inputLines:     []string{"CREATE SEQUENCE seq;", "ALTER SEQUENCE seq OWNED BY table1.col;"},
+			inputTables:    map[string]*Table{"table1": &Table{}},
+			expectedTables: expectedTablesMap1,
+			expectedLines:  []string{},
+			expectedError:  nil,
+		},
+		{
+			name:           "Sequence statements with default flags",
+			inputLines:     []string{"CREATE SEQUENCE seq START WITH 2 INCREMENT BY 1 NO MINVALUE NO MAXVALUE CACHE 2;", "ALTER SEQUENCE seq OWNED BY table1.col;"},
+			inputTables:    map[string]*Table{"table1": &Table{}},
+			expectedTables: expectedTablesMap2,
+			expectedLines:  []string{},
+			expectedError:  nil,
+		},
+		{
+			name:           "Sequence statements with extra lines",
+			inputLines:     []string{"\n", "abc", "CREATE SEQUENCE seq;", "ALTER SEQUENCE seq OWNED BY table1.col;", "end"},
+			inputTables:    map[string]*Table{"table1": &Table{}},
+			expectedTables: expectedTablesMap1,
+			expectedLines:  []string{"\n", "abc", "end"},
+			expectedError:  nil,
+		},
+	}
+	for _, test := range tests {
+		lines, err := MapSequences(test.inputLines, test.inputTables)
+		if err != nil && err.Error() != test.expectedError.Error() {
+			t.Error(test.name + " - fatal error")
+		} else if !similarTables(test.inputTables, test.expectedTables) {
 			t.Error(test.name + " - tables error")
 		} else if !similarLines(lines, test.expectedLines) {
 			t.Error(test.name + " - lines error")

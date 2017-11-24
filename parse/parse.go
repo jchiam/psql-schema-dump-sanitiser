@@ -48,6 +48,20 @@ func similarColumns(cols1, cols2 map[string]*Column) bool {
 	return true
 }
 
+func similarSequences(seqs1, seqs2 []*Sequence) bool {
+	if len(seqs1) != len(seqs2) {
+		return false
+	} else if len(seqs1) == 0 {
+		return true
+	}
+	for i, seq1 := range seqs1 {
+		if !cmp.Equal(seq1, seqs2[i]) {
+			return false
+		}
+	}
+	return true
+}
+
 func similarConstraints(cons1, cons2 map[string]string) bool {
 	if len(cons1) != len(cons2) {
 		return false
@@ -64,8 +78,8 @@ func similarConstraints(cons1, cons2 map[string]string) bool {
 
 // IsDeepEqual compares the two tables and returns whether they are deeply equal
 func (t Table) IsDeepEqual(table *Table) bool {
-	if !similarColumns(t.Columns, table.Columns) || !similarConstraints(t.Constraints, table.Constraints) ||
-		!cmp.Equal(t.Sequences, table.Sequences) || t.Index != table.Index {
+	if !similarColumns(t.Columns, table.Columns) || !similarSequences(t.Sequences, table.Sequences) ||
+		!similarConstraints(t.Constraints, table.Constraints) || !cmp.Equal(t.Sequences, table.Sequences) || t.Index != table.Index {
 		return false
 	}
 	return true
