@@ -138,11 +138,11 @@ func simplifyCreateSequenceStatement(stmt string) string {
 // MapSequences parses sql statements and squashes them into a single create sequence statement.
 // It then returns the remaining lines.
 // Note: Assumes relation statement is always after create statement.
-func MapSequences(lines []string, tables map[string]*Table) []string {
+func MapSequences(lines []string, tables map[string]*Table) ([]string, error) {
 	if len(lines) == 0 {
-		return lines
+		return lines, nil
 	} else if len(tables) == 0 {
-		log.Fatal(fmt.Errorf("sequence statements found with no mapped tables"))
+		return lines, fmt.Errorf("sequence statements found with no mapped tables")
 	}
 
 	var bufferLines []string
@@ -173,16 +173,16 @@ func MapSequences(lines []string, tables map[string]*Table) []string {
 		}
 	}
 
-	return bufferLines
+	return bufferLines, nil
 }
 
 // MapDefaultValues parses sql statements and maps default value related statements to its column in tables
 // It then returns the remaining lines
-func MapDefaultValues(lines []string, tables map[string]*Table) []string {
+func MapDefaultValues(lines []string, tables map[string]*Table) ([]string, error) {
 	if len(lines) == 0 {
-		return lines
+		return lines, nil
 	} else if len(tables) == 0 {
-		log.Fatal(fmt.Errorf("index statements found with no mapped tables"))
+		return lines, fmt.Errorf("index statements found with no mapped tables")
 	}
 
 	var bufferLines []string
@@ -210,16 +210,16 @@ func MapDefaultValues(lines []string, tables map[string]*Table) []string {
 		}
 	}
 
-	return bufferLines
+	return bufferLines, nil
 }
 
 // MapConstraints parses sql statements and maps constraint related statements to its tables
 // It then returns the remaining lines
-func MapConstraints(lines []string, tables map[string]*Table) []string {
+func MapConstraints(lines []string, tables map[string]*Table) ([]string, error) {
 	if len(lines) == 0 {
-		return lines
+		return lines, nil
 	} else if len(tables) == 0 {
-		log.Fatal(fmt.Errorf("index statements found with no mapped tables"))
+		return lines, fmt.Errorf("index statements found with no mapped tables")
 	}
 
 	var bufferLines []string
@@ -248,16 +248,16 @@ func MapConstraints(lines []string, tables map[string]*Table) []string {
 		}
 	}
 
-	return bufferLines
+	return bufferLines, nil
 }
 
 // MapIndices parses sql statements and maps index related statements to its tables
 // It then returns the remaining lines
-func MapIndices(lines []string, tables map[string]*Table) []string {
+func MapIndices(lines []string, tables map[string]*Table) ([]string, error) {
 	if len(lines) == 0 {
-		return lines
+		return lines, nil
 	} else if len(tables) == 0 {
-		log.Fatal(fmt.Errorf("index statements found with no mapped tables"))
+		return lines, fmt.Errorf("index statements found with no mapped tables")
 	}
 
 	var bufferLines []string
@@ -276,7 +276,7 @@ func MapIndices(lines []string, tables map[string]*Table) []string {
 		}
 	}
 
-	return bufferLines
+	return bufferLines, nil
 }
 
 // SquashMultiLineStatements squashes any multi-line sql statements to a single line

@@ -46,16 +46,28 @@ func main() {
 	lines = parse.SquashMultiLineStatements(lines)
 
 	// 4. Squash sequence statements into create sequence statements and map to tables
-	lines = parse.MapSequences(lines, tables)
+	lines, err = parse.MapSequences(lines, tables)
+	if err != nil {
+		log.Fatal(err)
+	}
 
 	// 5. Add default values to columns
-	lines = parse.MapDefaultValues(lines, tables)
+	lines, err = parse.MapDefaultValues(lines, tables)
+	if err != nil {
+		log.Fatal(err)
+	}
 
 	// 6. Map constraint statements to tables
-	lines = parse.MapConstraints(lines, tables)
+	lines, err = parse.MapConstraints(lines, tables)
+	if err != nil {
+		log.Fatal(err)
+	}
 
 	// 7. Map index statements to tables
-	lines = parse.MapIndices(lines, tables)
+	lines, err = parse.MapIndices(lines, tables)
+	if err != nil {
+		log.Fatal(err)
+	}
 
 	if len(lines) != 0 {
 		log.Fatal(fmt.Errorf("%d unprocessed lines remaining", len(lines)))
