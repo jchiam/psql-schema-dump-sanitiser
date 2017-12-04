@@ -210,13 +210,13 @@ func MapSequences(lines []string, tables map[string]*Table) ([]string, error) {
 			if strings.Contains(lines[i+1], "ALTER SEQUENCE "+seqName) {
 				alterSeq := lines[i+1]
 				ownedBy := strings.Split(alterSeq, " ")[5]
-				seqTable := strings.Split(ownedBy, ".")[0]
+				tableName := strings.Split(ownedBy, ".")[0]
 
 				sequence := &Sequence{
 					Create:   createSeq,
 					Relation: alterSeq,
 				}
-				if table, ok := tables[seqTable]; ok {
+				if table, ok := tables[tableName]; ok {
 					table.Sequences = append(table.Sequences, sequence)
 				} else {
 					return lines, fmt.Errorf("table does not exist")
@@ -334,7 +334,11 @@ func MapIndices(lines []string, tables map[string]*Table) ([]string, error) {
 					tableName = tokens[i+1]
 				}
 			}
-			tables[tableName].Index = line
+			if table, ok := tables[tableName]; ok {
+				table.Index = line
+			} else {
+				return lines, fmt.Errorf("table does not exist")
+			}
 		} else {
 			bufferLines = append(bufferLines, line)
 		}

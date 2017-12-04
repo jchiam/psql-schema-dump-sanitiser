@@ -467,6 +467,77 @@ func TestMapContraints(t *testing.T) {
 	}
 }
 
+func TestMapIndices(t *testing.T) {
+	inputTable1 := &Table{}
+	inputTable2 := &Table{}
+	expectedTable1 := &Table{Index: "CREATE UNIQUE INDEX user_idx ON table1 USING btree (username);"}
+	expectedTable2 := &Table{Index: "CREATE UNIQUE INDEX user_idx ON table2 USING btree (username);"}
+	inputTablesMap1 := map[string]*Table{"table1": inputTable1}
+	expectedTablesMap1 := map[string]*Table{"table1": expectedTable1}
+	inputTablesMap2 := map[string]*Table{"table2": inputTable2}
+	expectedTablesMap2 := map[string]*Table{"table2": expectedTable2}
+
+	tests := []struct {
+		name           string
+		inputLines     []string
+		inputTables    map[string]*Table
+		expectedTables map[string]*Table
+		expectedLines  []string
+		expectedError  error
+	}{
+		{
+			name:           "No input",
+			inputLines:     []string{},
+			inputTables:    map[string]*Table{"table1": &Table{}},
+			expectedTables: map[string]*Table{"table1": &Table{}},
+			expectedLines:  []string{},
+			expectedError:  nil,
+		},
+		{
+			name:           "No table",
+			inputLines:     []string{"CREATE UNIQUE INDEX user_idx ON table1 USING btree (username);"},
+			inputTables:    map[string]*Table{},
+			expectedTables: map[string]*Table{},
+			expectedLines:  []string{"CREATE UNIQUE INDEX user_idx ON table1 USING btree (username);"},
+			expectedError:  fmt.Errorf("index statements found with no mapped tables"),
+		},
+		{
+			name:           "Table does not exist",
+			inputLines:     []string{"CREATE UNIQUE INDEX user_idx ON table1 USING btree (username);"},
+			inputTables:    map[string]*Table{"table2": &Table{}},
+			expectedTables: map[string]*Table{"table2": &Table{}},
+			expectedLines:  []string{"CREATE UNIQUE INDEX user_idx ON table1 USING btree (username);"},
+			expectedError:  fmt.Errorf("table does not exist"),
+		},
+		{
+			name:           "Create index",
+			inputLines:     []string{"CREATE UNIQUE INDEX user_idx ON table1 USING btree (username);"},
+			inputTables:    inputTablesMap1,
+			expectedTables: expectedTablesMap1,
+			expectedLines:  []string{},
+			expectedError:  nil,
+		},
+		{
+			name:           "Index statements with extra lines",
+			inputLines:     []string{"", "abc", "CREATE UNIQUE INDEX user_idx ON table2 USING btree (username);", "def"},
+			inputTables:    inputTablesMap2,
+			expectedTables: expectedTablesMap2,
+			expectedLines:  []string{"", "abc", "def"},
+			expectedError:  nil,
+		},
+	}
+	for _, test := range tests {
+		lines, err := MapIndices(test.inputLines, test.inputTables)
+		if err != nil && err.Error() != test.expectedError.Error() {
+			t.Error(test.name + " - fatal error")
+		} else if !similarTables(test.inputTables, test.expectedTables) {
+			t.Error(test.name + " - tables error")
+		} else if !similarLines(lines, test.expectedLines) {
+			t.Error(test.name + " - lines error")
+		}
+	}
+}
+
 func similarTables(tables1, tables2 map[string]*Table) bool {
 	if len(tables1) != len(tables2) {
 		return false
