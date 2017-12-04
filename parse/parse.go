@@ -271,7 +271,7 @@ func MapConstraints(lines []string, tables map[string]*Table) ([]string, error) 
 	if len(lines) == 0 {
 		return lines, nil
 	} else if len(tables) == 0 {
-		return lines, fmt.Errorf("index statements found with no mapped tables")
+		return lines, fmt.Errorf("constraint statements found with no mapped tables")
 	}
 
 	var bufferLines []string

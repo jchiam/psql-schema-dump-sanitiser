@@ -316,11 +316,132 @@ func TestMapDefaultValues(t *testing.T) {
 		if err != nil && err.Error() != test.expectedError.Error() {
 			t.Error(test.name + " - fatal error")
 		} else if !similarTables(test.inputTables, test.expectedTables) {
-			fmt.Println(test.inputLines)
-			fmt.Println(test.inputTables["table2"].Columns["col1"])
-			fmt.Println(test.expectedTables["table2"].Columns["col1"])
 			t.Error(test.name + " - tables error")
 		} else if !similarLines(lines, test.expectedLines) {
+			t.Error(test.name + " - lines error")
+		}
+	}
+}
+
+func TestMapContraints(t *testing.T) {
+	inputTable1 := &Table{
+		Columns: map[string]*Column{
+			"id": &Column{Statement: "col id"},
+		},
+		Constraints: make(map[string]string),
+	}
+	inputTable2 := &Table{
+		Columns: map[string]*Column{
+			"id": &Column{Statement: "col id"},
+		},
+		Constraints: make(map[string]string),
+	}
+	inputTable3 := &Table{
+		Columns: map[string]*Column{
+			"id": &Column{Statement: "col id"},
+		},
+		Constraints: make(map[string]string),
+	}
+	expectedTable1 := &Table{
+		Columns: map[string]*Column{
+			"id": &Column{
+				Statement:    "col id",
+				IsPrimaryKey: true,
+			},
+		},
+		Constraints: map[string]string{
+			"table_pkey": "CONSTRAINT table_pkey PRIMARY KEY (id)",
+		},
+	}
+	expectedTable2 := &Table{
+		Columns: map[string]*Column{
+			"id": &Column{
+				Statement:    "col id",
+				IsForeignKey: true,
+			},
+		},
+		Constraints: map[string]string{
+			"table_fkey": "CONSTRAINT table_fkey FOREIGN KEY (id) REFERENCES table2(id) ON DELETE CASCADE",
+		},
+	}
+	expectedTable3 := &Table{
+		Columns: map[string]*Column{
+			"id": &Column{
+				Statement:    "col id",
+				IsPrimaryKey: true,
+			},
+		},
+		Constraints: map[string]string{
+			"table_pkey": "CONSTRAINT table_pkey PRIMARY KEY (id)",
+		},
+	}
+	inputTablesMap1 := map[string]*Table{"table1": inputTable1}
+	expectedTablesMap1 := map[string]*Table{"table1": expectedTable1}
+	inputTablesMap2 := map[string]*Table{"table2": inputTable2}
+	expectedTablesMap2 := map[string]*Table{"table2": expectedTable2}
+	inputTablesMap3 := map[string]*Table{"table3": inputTable3}
+	expectedTablesMap3 := map[string]*Table{"table3": expectedTable3}
+
+	tests := []struct {
+		name           string
+		inputLines     []string
+		inputTables    map[string]*Table
+		expectedTables map[string]*Table
+		expectedLines  []string
+		expectedError  error
+	}{
+		{
+			name:           "No input",
+			inputLines:     []string{},
+			inputTables:    map[string]*Table{"table1": &Table{}},
+			expectedTables: map[string]*Table{"table1": &Table{}},
+			expectedLines:  []string{},
+			expectedError:  nil,
+		},
+		{
+			name:           "No table",
+			inputLines:     []string{"ALTER TABLE ONLY table1 ADD CONSTRAINT table_pkey PRIMARY KEY (id);"},
+			inputTables:    map[string]*Table{},
+			expectedTables: map[string]*Table{},
+			expectedLines:  []string{"ALTER TABLE ONLY table1 ADD CONSTRAINT table_pkey PRIMARY KEY (id);"},
+			expectedError:  fmt.Errorf("constraint statements found with no mapped tables"),
+		},
+		{
+			name:           "Primary key constraint",
+			inputLines:     []string{"ALTER TABLE ONLY table1 ADD CONSTRAINT table_pkey PRIMARY KEY (id);"},
+			inputTables:    inputTablesMap1,
+			expectedTables: expectedTablesMap1,
+			expectedLines:  []string{},
+			expectedError:  nil,
+		},
+		{
+			name:           "Foreign key constraint",
+			inputLines:     []string{"ALTER TABLE ONLY table2 ADD CONSTRAINT table_fkey FOREIGN KEY (id) REFERENCES table2(id) ON DELETE CASCADE;"},
+			inputTables:    inputTablesMap2,
+			expectedTables: expectedTablesMap2,
+			expectedLines:  []string{},
+			expectedError:  nil,
+		},
+		{
+			name:           "Constraint statements with extra lines",
+			inputLines:     []string{"", "abc", "ALTER TABLE ONLY table3 ADD CONSTRAINT table_pkey PRIMARY KEY (id);", "def"},
+			inputTables:    inputTablesMap3,
+			expectedTables: expectedTablesMap3,
+			expectedLines:  []string{"", "abc", "def"},
+			expectedError:  nil,
+		},
+	}
+	for _, test := range tests {
+		lines, err := MapConstraints(test.inputLines, test.inputTables)
+		if err != nil && err.Error() != test.expectedError.Error() {
+			t.Error(test.name + " - fatal error")
+		} else if !similarTables(test.inputTables, test.expectedTables) {
+			fmt.Println(test.inputTables["table3"].Constraints)
+			fmt.Println(test.expectedTables["table3"].Constraints)
+			t.Error(test.name + " - tables error")
+		} else if !similarLines(lines, test.expectedLines) {
+			fmt.Println(lines)
+			fmt.Println(test.expectedLines)
 			t.Error(test.name + " - lines error")
 		}
 	}
