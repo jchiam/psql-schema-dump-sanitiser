@@ -303,6 +303,14 @@ func TestMapDefaultValues(t *testing.T) {
 			expectedError:  fmt.Errorf("table does not exist"),
 		},
 		{
+			name:           "Column does not exist",
+			inputLines:     []string{"ALTER TABLE ONLY table1 ALTER COLUMN id SET DEFAULT nextval('seq'::regclass);"},
+			inputTables:    map[string]*Table{"table1": &Table{Columns: make(map[string]*Column)}},
+			expectedTables: map[string]*Table{"table1": &Table{Columns: make(map[string]*Column)}},
+			expectedLines:  []string{"ALTER TABLE ONLY table1 ALTER COLUMN id SET DEFAULT nextval('seq'::regclass);"},
+			expectedError:  fmt.Errorf("column does not exist"),
+		},
+		{
 			name:           "Default seq value",
 			inputLines:     []string{"ALTER TABLE ONLY table1 ALTER COLUMN col1 SET DEFAULT nextval('seq'::regclass);"},
 			inputTables:    inputTablesMap1,
@@ -339,7 +347,7 @@ func TestMapDefaultValues(t *testing.T) {
 	}
 }
 
-func TestMapContraints(t *testing.T) {
+func TestMapConstraints(t *testing.T) {
 	inputTable1 := &Table{
 		Columns: map[string]*Column{
 			"id": &Column{Statement: "col id"},
@@ -431,6 +439,22 @@ func TestMapContraints(t *testing.T) {
 			expectedError:  fmt.Errorf("table does not exist"),
 		},
 		{
+			name:           "Column does not exist - primary key",
+			inputLines:     []string{"ALTER TABLE ONLY table1 ADD CONSTRAINT table_pkey PRIMARY KEY (id);"},
+			inputTables:    map[string]*Table{"table1": &Table{Constraints: make(map[string]string)}},
+			expectedTables: map[string]*Table{"table1": &Table{Constraints: make(map[string]string)}},
+			expectedLines:  []string{"ALTER TABLE ONLY table1 ADD CONSTRAINT table_pkey PRIMARY KEY (id);"},
+			expectedError:  fmt.Errorf("column does not exist"),
+		},
+		{
+			name:           "Column does not exist - foreign key",
+			inputLines:     []string{"ALTER TABLE ONLY table1 ADD CONSTRAINT table_pkey FOREIGN KEY (id);"},
+			inputTables:    map[string]*Table{"table1": &Table{Constraints: make(map[string]string)}},
+			expectedTables: map[string]*Table{"table1": &Table{Constraints: make(map[string]string)}},
+			expectedLines:  []string{"ALTER TABLE ONLY table1 ADD CONSTRAINT table_pkey FOREIGN KEY (id);"},
+			expectedError:  fmt.Errorf("column does not exist"),
+		},
+		{
 			name:           "Primary key constraint",
 			inputLines:     []string{"ALTER TABLE ONLY table1 ADD CONSTRAINT table_pkey PRIMARY KEY (id);"},
 			inputTables:    inputTablesMap1,
@@ -460,6 +484,8 @@ func TestMapContraints(t *testing.T) {
 		if err != nil && err.Error() != test.expectedError.Error() {
 			t.Error(test.name + " - fatal error")
 		} else if !similarTables(test.inputTables, test.expectedTables) {
+			fmt.Println(test.inputTables["table1"])
+			fmt.Println(test.expectedTables["table1"])
 			t.Error(test.name + " - tables error")
 		} else if !similarLines(lines, test.expectedLines) {
 			t.Error(test.name + " - lines error")

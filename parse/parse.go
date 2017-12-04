@@ -260,8 +260,12 @@ func MapDefaultValues(lines []string, tables map[string]*Table) ([]string, error
 			}
 			if table, ok := tables[tableName]; ok {
 				columns := table.Columns
-				columns[columnName].Statement += " " + line[index:len(line)-1]
-				table.Columns = columns
+				if column, ok := columns[columnName]; ok {
+					column.Statement += " " + line[index:len(line)-1]
+					table.Columns = columns
+				} else {
+					return lines, fmt.Errorf("column does not exist")
+				}
 			} else {
 				return lines, fmt.Errorf("table does not exist")
 			}
@@ -299,12 +303,22 @@ func MapConstraints(lines []string, tables map[string]*Table) ([]string, error) 
 			if strings.Index(line, "PRIMARY KEY") != -1 {
 				columns := strings.Split(line[strings.Index(line, "(")+1:strings.Index(line, ")")], ", ")
 				for _, column := range columns {
-					tables[tableName].Columns[column].IsPrimaryKey = true
+					if currentCol, ok := tables[tableName].Columns[column]; ok {
+						currentCol.IsPrimaryKey = true
+					} else {
+						delete(tables[tableName].Constraints, constraintName)
+						return lines, fmt.Errorf("column does not exist")
+					}
 				}
 			} else if strings.Index(line, "FOREIGN KEY") != -1 {
 				columns := strings.Split(line[strings.Index(line, "(")+1:strings.Index(line, ")")], ", ")
 				for _, column := range columns {
-					tables[tableName].Columns[column].IsForeignKey = true
+					if currentCol, ok := tables[tableName].Columns[column]; ok {
+						currentCol.IsForeignKey = true
+					} else {
+						delete(tables[tableName].Constraints, constraintName)
+						return lines, fmt.Errorf("column does not exist")
+					}
 				}
 			}
 		} else {
