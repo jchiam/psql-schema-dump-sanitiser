@@ -174,6 +174,14 @@ func TestMapSequences(t *testing.T) {
 			expectedError:  fmt.Errorf("sequence statements found with no mapped tables"),
 		},
 		{
+			name:           "Table does not exist",
+			inputLines:     []string{"CREATE SEQUENCE seq START WITH 1 INCREMENT BY 1 NO MINVALUE NO MAXVALUE CACHE 1;", "ALTER SEQUENCE seq OWNED BY table1.col;"},
+			inputTables:    map[string]*Table{"table2": &Table{}},
+			expectedTables: map[string]*Table{"table2": &Table{}},
+			expectedLines:  []string{"CREATE SEQUENCE seq START WITH 1 INCREMENT BY 1 NO MINVALUE NO MAXVALUE CACHE 1;", "ALTER SEQUENCE seq OWNED BY table1.col;"},
+			expectedError:  fmt.Errorf("table does not exist"),
+		},
+		{
 			name:           "Sequence statements with default flags",
 			inputLines:     []string{"CREATE SEQUENCE seq START WITH 1 INCREMENT BY 1 NO MINVALUE NO MAXVALUE CACHE 1;", "ALTER SEQUENCE seq OWNED BY table1.col;"},
 			inputTables:    map[string]*Table{"table1": &Table{}},
@@ -285,6 +293,14 @@ func TestMapDefaultValues(t *testing.T) {
 			expectedTables: map[string]*Table{},
 			expectedLines:  []string{"ALTER TABLE ONLY test ALTER COLUMN id SET DEFAULT nextval('seq'::regclass);"},
 			expectedError:  fmt.Errorf("default value statements found with no mapped tables"),
+		},
+		{
+			name:           "Table does not exist",
+			inputLines:     []string{"ALTER TABLE ONLY test ALTER COLUMN id SET DEFAULT nextval('seq'::regclass);"},
+			inputTables:    map[string]*Table{"table2": &Table{}},
+			expectedTables: map[string]*Table{"table2": &Table{}},
+			expectedLines:  []string{"ALTER TABLE ONLY test ALTER COLUMN id SET DEFAULT nextval('seq'::regclass);"},
+			expectedError:  fmt.Errorf("table does not exist"),
 		},
 		{
 			name:           "Default seq value",
@@ -407,6 +423,14 @@ func TestMapContraints(t *testing.T) {
 			expectedError:  fmt.Errorf("constraint statements found with no mapped tables"),
 		},
 		{
+			name:           "Table does not exist",
+			inputLines:     []string{"ALTER TABLE ONLY table1 ADD CONSTRAINT table_pkey PRIMARY KEY (id);"},
+			inputTables:    map[string]*Table{"table2": &Table{}},
+			expectedTables: map[string]*Table{"table2": &Table{}},
+			expectedLines:  []string{"ALTER TABLE ONLY table1 ADD CONSTRAINT table_pkey PRIMARY KEY (id);"},
+			expectedError:  fmt.Errorf("table does not exist"),
+		},
+		{
 			name:           "Primary key constraint",
 			inputLines:     []string{"ALTER TABLE ONLY table1 ADD CONSTRAINT table_pkey PRIMARY KEY (id);"},
 			inputTables:    inputTablesMap1,
@@ -436,12 +460,8 @@ func TestMapContraints(t *testing.T) {
 		if err != nil && err.Error() != test.expectedError.Error() {
 			t.Error(test.name + " - fatal error")
 		} else if !similarTables(test.inputTables, test.expectedTables) {
-			fmt.Println(test.inputTables["table3"].Constraints)
-			fmt.Println(test.expectedTables["table3"].Constraints)
 			t.Error(test.name + " - tables error")
 		} else if !similarLines(lines, test.expectedLines) {
-			fmt.Println(lines)
-			fmt.Println(test.expectedLines)
 			t.Error(test.name + " - lines error")
 		}
 	}
