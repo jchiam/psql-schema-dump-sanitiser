@@ -218,6 +218,114 @@ func TestMapSequences(t *testing.T) {
 	}
 }
 
+func TestMapDefaultValues(t *testing.T) {
+	inputTable1 := &Table{
+		Columns: map[string]*Column{
+			"col1": &Column{Statement: "varchar"},
+			"col2": &Column{Statement: "string"},
+		},
+	}
+	inputTable2 := &Table{
+		Columns: map[string]*Column{
+			"col1": &Column{Statement: "varchar"},
+			"col2": &Column{Statement: "string"},
+		},
+	}
+	inputTable3 := &Table{
+		Columns: map[string]*Column{
+			"col1": &Column{Statement: "varchar"},
+			"col2": &Column{Statement: "string"},
+		},
+	}
+	expectedTable1 := &Table{
+		Columns: map[string]*Column{
+			"col1": &Column{Statement: "varchar DEFAULT nextval('seq'::regclass)"},
+			"col2": &Column{Statement: "string"},
+		},
+	}
+	expectedTable2 := &Table{
+		Columns: map[string]*Column{
+			"col1": &Column{Statement: "varchar"},
+			"col2": &Column{Statement: "string DEFAULT nextval('seq'::regclass)"},
+		},
+	}
+	expectedTable3 := &Table{
+		Columns: map[string]*Column{
+			"col1": &Column{Statement: "varchar DEFAULT nextval('seq'::regclass)"},
+			"col2": &Column{Statement: "string"},
+		},
+	}
+	inputTablesMap1 := map[string]*Table{"table1": inputTable1}
+	expectedTablesMap1 := map[string]*Table{"table1": expectedTable1}
+	inputTablesMap2 := map[string]*Table{"table2": inputTable2}
+	expectedTablesMap2 := map[string]*Table{"table2": expectedTable2}
+	inputTablesMap3 := map[string]*Table{"table3": inputTable3}
+	expectedTablesMap3 := map[string]*Table{"table3": expectedTable3}
+
+	tests := []struct {
+		name           string
+		inputLines     []string
+		inputTables    map[string]*Table
+		expectedTables map[string]*Table
+		expectedLines  []string
+		expectedError  error
+	}{
+		{
+			name:           "No input",
+			inputLines:     []string{},
+			inputTables:    map[string]*Table{"table1": &Table{}},
+			expectedTables: map[string]*Table{"table1": &Table{}},
+			expectedLines:  []string{},
+			expectedError:  nil,
+		},
+		{
+			name:           "No table",
+			inputLines:     []string{"ALTER TABLE ONLY test ALTER COLUMN id SET DEFAULT nextval('seq'::regclass);"},
+			inputTables:    map[string]*Table{},
+			expectedTables: map[string]*Table{},
+			expectedLines:  []string{"ALTER TABLE ONLY test ALTER COLUMN id SET DEFAULT nextval('seq'::regclass);"},
+			expectedError:  fmt.Errorf("default value statements found with no mapped tables"),
+		},
+		{
+			name:           "Default seq value",
+			inputLines:     []string{"ALTER TABLE ONLY table1 ALTER COLUMN col1 SET DEFAULT nextval('seq'::regclass);"},
+			inputTables:    inputTablesMap1,
+			expectedTables: expectedTablesMap1,
+			expectedLines:  []string{},
+			expectedError:  nil,
+		},
+		{
+			name:           "Alter table does not contain \"ONLY\"",
+			inputLines:     []string{"ALTER TABLE table2 ALTER COLUMN col2 SET DEFAULT nextval('seq'::regclass);"},
+			inputTables:    inputTablesMap2,
+			expectedTables: expectedTablesMap2,
+			expectedLines:  []string{},
+			expectedError:  nil,
+		},
+		{
+			name:           "Set default statements with extra lines",
+			inputLines:     []string{"", "abc", "ALTER TABLE ONLY table3 ALTER COLUMN col1 SET DEFAULT nextval('seq'::regclass);", "def"},
+			inputTables:    inputTablesMap3,
+			expectedTables: expectedTablesMap3,
+			expectedLines:  []string{"", "abc", "def"},
+			expectedError:  nil,
+		},
+	}
+	for _, test := range tests {
+		lines, err := MapDefaultValues(test.inputLines, test.inputTables)
+		if err != nil && err.Error() != test.expectedError.Error() {
+			t.Error(test.name + " - fatal error")
+		} else if !similarTables(test.inputTables, test.expectedTables) {
+			fmt.Println(test.inputLines)
+			fmt.Println(test.inputTables["table2"].Columns["col1"])
+			fmt.Println(test.expectedTables["table2"].Columns["col1"])
+			t.Error(test.name + " - tables error")
+		} else if !similarLines(lines, test.expectedLines) {
+			t.Error(test.name + " - lines error")
+		}
+	}
+}
+
 func similarTables(tables1, tables2 map[string]*Table) bool {
 	if len(tables1) != len(tables2) {
 		return false
