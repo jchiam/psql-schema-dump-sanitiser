@@ -6,7 +6,7 @@ import (
 	"log"
 	"os"
 
-	"github.com/psql-schema-dump-sanitiser.git/parse"
+	"github.com/jchiam/psql-schema-dump-sanitiser/parse"
 )
 
 func main() {
