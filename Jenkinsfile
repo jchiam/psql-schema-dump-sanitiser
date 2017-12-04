@@ -5,8 +5,9 @@ pipeline {
 
     environment {
         GOROOT = tool name: 'Go 1.9', type: 'go'
+        PROJECT = "psql-schema-dump-sanitiser"
         GOPATH = "${JENKINS_HOME}/workspace/${JOB_NAME}/${BUILD_ID}"
-        GOSRC = "${GOPATH}/src/github.com/psql-schema-dump-sanitiser.git"
+        GOSRC = "${GOPATH}/src/github.com/jchiam"
     }
 
     stages {
@@ -26,7 +27,7 @@ pipeline {
                 withEnv(["PATH+GO=${GOROOT}/bin"]) {
                     echo 'Vetting Code'
 
-                    sh 'cd $GOSRC && make vet'
+                    sh 'cd $GOSRC/$PROJECT && make vet'
                 }
             }
         }
@@ -36,7 +37,7 @@ pipeline {
                 withEnv(["PATH+GO=${GOROOT}/bin"]) {
                     echo 'Linting Code'
 
-                    sh 'cd $GOSRC && make lint'
+                    sh 'cd $GOSRC/$PROJECT && make lint'
                 }
             }
         }
@@ -46,7 +47,7 @@ pipeline {
                 withEnv(["PATH+GO=${GOROOT}/bin"]) {
                     echo 'Tests'
 
-                    sh 'cd $GOSRC && make test'
+                    sh 'cd $GOSRC/$PROJECT && make test'
                 }
             }
         }

@@ -1,6 +1,7 @@
 setup:
 	go get -u github.com/golang/lint/golint
-	ln -s ${WORKSPACE}/ ${GOSRC}
+	mkdir -p ${GOSRC}
+	ln -s ${WORKSPACE}/ ${GOSRC}/${PROJECT}
 
 vet:
 	go tool vet main.go parse/*.go graph/*.go

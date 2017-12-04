@@ -1,4 +1,5 @@
 *.git
+psql-schema-dump-sanitiser
 
 # dev test files
 schema.sql

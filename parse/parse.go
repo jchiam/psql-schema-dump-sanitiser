@@ -10,7 +10,7 @@ import (
 	"strings"
 
 	"github.com/google/go-cmp/cmp"
-	"github.com/psql-schema-dump-sanitiser.git/graph"
+	"github.com/jchiam/psql-schema-dump-sanitiser/graph"
 )
 
 // Column is the struct containing logical aspects of a table column
