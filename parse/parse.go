@@ -9,6 +9,7 @@ import (
 	"sort"
 	"strings"
 
+	"github.com/google/go-cmp/cmp"
 	"github.com/psql-schema-dump-sanitiser.git/graph"
 )
 
@@ -33,9 +34,60 @@ type Table struct {
 	Index       string
 }
 
+func similarColumns(cols1, cols2 map[string]*Column) bool {
+	if len(cols1) != len(cols2) {
+		return false
+	} else if len(cols1) == 0 {
+		return true
+	}
+	for col := range cols1 {
+		if !cmp.Equal(cols1[col], cols2[col]) {
+			return false
+		}
+	}
+	return true
+}
+
+func similarSequences(seqs1, seqs2 []*Sequence) bool {
+	if len(seqs1) != len(seqs2) {
+		return false
+	} else if len(seqs1) == 0 {
+		return true
+	}
+	for i, seq1 := range seqs1 {
+		if !cmp.Equal(seq1, seqs2[i]) {
+			return false
+		}
+	}
+	return true
+}
+
+func similarConstraints(cons1, cons2 map[string]string) bool {
+	if len(cons1) != len(cons2) {
+		return false
+	} else if len(cons1) == 0 {
+		return true
+	}
+	for cons := range cons1 {
+		if !cmp.Equal(cons1[cons], cons2[cons]) {
+			return false
+		}
+	}
+	return true
+}
+
+// IsDeepEqual compares the two tables and returns whether they are deeply equal
+func (t Table) IsDeepEqual(table *Table) bool {
+	if !similarColumns(t.Columns, table.Columns) || !similarSequences(t.Sequences, table.Sequences) ||
+		!similarConstraints(t.Constraints, table.Constraints) || !cmp.Equal(t.Sequences, table.Sequences) || t.Index != table.Index {
+		return false
+	}
+	return true
+}
+
 // IsRedundant checks if line is a redundant sql statement or comment
 func IsRedundant(line string) bool {
-	if len(line) == 0 {
+	if len(line) == 0 || line == "\n" {
 		return true
 	}
 
@@ -182,12 +234,12 @@ func MapDefaultValues(lines []string, tables map[string]*Table) ([]string, error
 	if len(lines) == 0 {
 		return lines, nil
 	} else if len(tables) == 0 {
-		return lines, fmt.Errorf("index statements found with no mapped tables")
+		return lines, fmt.Errorf("default value statements found with no mapped tables")
 	}
 
 	var bufferLines []string
 	for _, line := range lines {
-		index := strings.Index(line, "DEFAULT nextval")
+		index := strings.Index(line, "DEFAULT")
 		if index != -1 {
 			tokens := strings.Split(line, " ")
 			var tableName, columnName string

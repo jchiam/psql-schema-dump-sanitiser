@@ -1,4 +1,8 @@
 *.git
 
+# dev test files
 schema.sql
 output.sql
+
+# coverage files
+coverage.out

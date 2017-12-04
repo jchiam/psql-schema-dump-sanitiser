@@ -7,7 +7,20 @@ The library was last updated with PostgreSQL 10.1.
 ## Setup
 
 ```
-go get github.com/jchiam/psql-schema-dump-sanitiser
+go get -u github.com/jchiam/psql-schema-dump-sanitiser
+```
+
+### Linting
+
+```
+go get -u github.com/golang/lint/golint
+golint <path>
+```
+
+### Tests
+
+```
+go test <path>
 ```
 
 ## Usage
@@ -30,8 +43,8 @@ The processing mechanism is as follows.
 1. `CREATE TABLE` statements are parsed into table maps containing column information
 1. Any multi-line statements are squashed into single line statements
 1. Sequences are parsed and process through the following
-   1. Modifiers with default values are removed
-   1. `ALTER SEQUENCE` statements for table ownership are squashed into the respective `CREATE SEQUENCE` statements
+   1. Modifiers with default values are removed for `CREATE SEQUENCE` statements
+   1. `CREATE SEQUENCE` and `ALTER SEQUENCE` statements are mapped respectively to their tables
 1. Default values are added to the table columns
 1. Constraint statements are mapped to tables and columns are marked as primary key or foreign key
 1. Indices statements are mapped to tables
