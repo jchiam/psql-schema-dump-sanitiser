@@ -210,13 +210,17 @@ func MapSequences(lines []string, tables map[string]*Table) ([]string, error) {
 			if strings.Contains(lines[i+1], "ALTER SEQUENCE "+seqName) {
 				alterSeq := lines[i+1]
 				ownedBy := strings.Split(alterSeq, " ")[5]
-				seqTable := strings.Split(ownedBy, ".")[0]
+				tableName := strings.Split(ownedBy, ".")[0]
 
 				sequence := &Sequence{
 					Create:   createSeq,
 					Relation: alterSeq,
 				}
-				tables[seqTable].Sequences = append(tables[seqTable].Sequences, sequence)
+				if table, ok := tables[tableName]; ok {
+					table.Sequences = append(table.Sequences, sequence)
+				} else {
+					return lines, fmt.Errorf("table does not exist")
+				}
 			}
 		} else if strings.Contains(line, "ALTER SEQUENCE") && strings.Contains(line, "OWNED BY") {
 			continue
@@ -254,9 +258,17 @@ func MapDefaultValues(lines []string, tables map[string]*Table) ([]string, error
 					break
 				}
 			}
-			columns := tables[tableName].Columns
-			columns[columnName].Statement += " " + line[index:len(line)-1]
-			tables[tableName].Columns = columns
+			if table, ok := tables[tableName]; ok {
+				columns := table.Columns
+				if column, ok := columns[columnName]; ok {
+					column.Statement += " " + line[index:len(line)-1]
+					table.Columns = columns
+				} else {
+					return lines, fmt.Errorf("column does not exist")
+				}
+			} else {
+				return lines, fmt.Errorf("table does not exist")
+			}
 		} else {
 			bufferLines = append(bufferLines, line)
 		}
@@ -271,7 +283,7 @@ func MapConstraints(lines []string, tables map[string]*Table) ([]string, error) 
 	if len(lines) == 0 {
 		return lines, nil
 	} else if len(tables) == 0 {
-		return lines, fmt.Errorf("index statements found with no mapped tables")
+		return lines, fmt.Errorf("constraint statements found with no mapped tables")
 	}
 
 	var bufferLines []string
@@ -281,18 +293,32 @@ func MapConstraints(lines []string, tables map[string]*Table) ([]string, error) 
 			tokens := strings.Split(line, " ")
 			tableName := tokens[3]
 			constraintName := tokens[6]
-			tables[tableName].Constraints[constraintName] = line[index : len(line)-1]
+			if table, ok := tables[tableName]; ok {
+				table.Constraints[constraintName] = line[index : len(line)-1]
+			} else {
+				return lines, fmt.Errorf("table does not exist")
+			}
 
 			// update column primary or foreign keys
 			if strings.Index(line, "PRIMARY KEY") != -1 {
 				columns := strings.Split(line[strings.Index(line, "(")+1:strings.Index(line, ")")], ", ")
 				for _, column := range columns {
-					tables[tableName].Columns[column].IsPrimaryKey = true
+					if currentCol, ok := tables[tableName].Columns[column]; ok {
+						currentCol.IsPrimaryKey = true
+					} else {
+						delete(tables[tableName].Constraints, constraintName)
+						return lines, fmt.Errorf("column does not exist")
+					}
 				}
 			} else if strings.Index(line, "FOREIGN KEY") != -1 {
 				columns := strings.Split(line[strings.Index(line, "(")+1:strings.Index(line, ")")], ", ")
 				for _, column := range columns {
-					tables[tableName].Columns[column].IsForeignKey = true
+					if currentCol, ok := tables[tableName].Columns[column]; ok {
+						currentCol.IsForeignKey = true
+					} else {
+						delete(tables[tableName].Constraints, constraintName)
+						return lines, fmt.Errorf("column does not exist")
+					}
 				}
 			}
 		} else {
@@ -322,7 +348,11 @@ func MapIndices(lines []string, tables map[string]*Table) ([]string, error) {
 					tableName = tokens[i+1]
 				}
 			}
-			tables[tableName].Index = line
+			if table, ok := tables[tableName]; ok {
+				table.Index = line
+			} else {
+				return lines, fmt.Errorf("table does not exist")
+			}
 		} else {
 			bufferLines = append(bufferLines, line)
 		}

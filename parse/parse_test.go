@@ -174,6 +174,14 @@ func TestMapSequences(t *testing.T) {
 			expectedError:  fmt.Errorf("sequence statements found with no mapped tables"),
 		},
 		{
+			name:           "Table does not exist",
+			inputLines:     []string{"CREATE SEQUENCE seq START WITH 1 INCREMENT BY 1 NO MINVALUE NO MAXVALUE CACHE 1;", "ALTER SEQUENCE seq OWNED BY table1.col;"},
+			inputTables:    map[string]*Table{"table2": &Table{}},
+			expectedTables: map[string]*Table{"table2": &Table{}},
+			expectedLines:  []string{"CREATE SEQUENCE seq START WITH 1 INCREMENT BY 1 NO MINVALUE NO MAXVALUE CACHE 1;", "ALTER SEQUENCE seq OWNED BY table1.col;"},
+			expectedError:  fmt.Errorf("table does not exist"),
+		},
+		{
 			name:           "Sequence statements with default flags",
 			inputLines:     []string{"CREATE SEQUENCE seq START WITH 1 INCREMENT BY 1 NO MINVALUE NO MAXVALUE CACHE 1;", "ALTER SEQUENCE seq OWNED BY table1.col;"},
 			inputTables:    map[string]*Table{"table1": &Table{}},
@@ -287,6 +295,22 @@ func TestMapDefaultValues(t *testing.T) {
 			expectedError:  fmt.Errorf("default value statements found with no mapped tables"),
 		},
 		{
+			name:           "Table does not exist",
+			inputLines:     []string{"ALTER TABLE ONLY test ALTER COLUMN id SET DEFAULT nextval('seq'::regclass);"},
+			inputTables:    map[string]*Table{"table2": &Table{}},
+			expectedTables: map[string]*Table{"table2": &Table{}},
+			expectedLines:  []string{"ALTER TABLE ONLY test ALTER COLUMN id SET DEFAULT nextval('seq'::regclass);"},
+			expectedError:  fmt.Errorf("table does not exist"),
+		},
+		{
+			name:           "Column does not exist",
+			inputLines:     []string{"ALTER TABLE ONLY table1 ALTER COLUMN id SET DEFAULT nextval('seq'::regclass);"},
+			inputTables:    map[string]*Table{"table1": &Table{Columns: make(map[string]*Column)}},
+			expectedTables: map[string]*Table{"table1": &Table{Columns: make(map[string]*Column)}},
+			expectedLines:  []string{"ALTER TABLE ONLY table1 ALTER COLUMN id SET DEFAULT nextval('seq'::regclass);"},
+			expectedError:  fmt.Errorf("column does not exist"),
+		},
+		{
 			name:           "Default seq value",
 			inputLines:     []string{"ALTER TABLE ONLY table1 ALTER COLUMN col1 SET DEFAULT nextval('seq'::regclass);"},
 			inputTables:    inputTablesMap1,
@@ -316,9 +340,223 @@ func TestMapDefaultValues(t *testing.T) {
 		if err != nil && err.Error() != test.expectedError.Error() {
 			t.Error(test.name + " - fatal error")
 		} else if !similarTables(test.inputTables, test.expectedTables) {
-			fmt.Println(test.inputLines)
-			fmt.Println(test.inputTables["table2"].Columns["col1"])
-			fmt.Println(test.expectedTables["table2"].Columns["col1"])
+			t.Error(test.name + " - tables error")
+		} else if !similarLines(lines, test.expectedLines) {
+			t.Error(test.name + " - lines error")
+		}
+	}
+}
+
+func TestMapConstraints(t *testing.T) {
+	inputTable1 := &Table{
+		Columns: map[string]*Column{
+			"id": &Column{Statement: "col id"},
+		},
+		Constraints: make(map[string]string),
+	}
+	inputTable2 := &Table{
+		Columns: map[string]*Column{
+			"id": &Column{Statement: "col id"},
+		},
+		Constraints: make(map[string]string),
+	}
+	inputTable3 := &Table{
+		Columns: map[string]*Column{
+			"id": &Column{Statement: "col id"},
+		},
+		Constraints: make(map[string]string),
+	}
+	expectedTable1 := &Table{
+		Columns: map[string]*Column{
+			"id": &Column{
+				Statement:    "col id",
+				IsPrimaryKey: true,
+			},
+		},
+		Constraints: map[string]string{
+			"table_pkey": "CONSTRAINT table_pkey PRIMARY KEY (id)",
+		},
+	}
+	expectedTable2 := &Table{
+		Columns: map[string]*Column{
+			"id": &Column{
+				Statement:    "col id",
+				IsForeignKey: true,
+			},
+		},
+		Constraints: map[string]string{
+			"table_fkey": "CONSTRAINT table_fkey FOREIGN KEY (id) REFERENCES table2(id) ON DELETE CASCADE",
+		},
+	}
+	expectedTable3 := &Table{
+		Columns: map[string]*Column{
+			"id": &Column{
+				Statement:    "col id",
+				IsPrimaryKey: true,
+			},
+		},
+		Constraints: map[string]string{
+			"table_pkey": "CONSTRAINT table_pkey PRIMARY KEY (id)",
+		},
+	}
+	inputTablesMap1 := map[string]*Table{"table1": inputTable1}
+	expectedTablesMap1 := map[string]*Table{"table1": expectedTable1}
+	inputTablesMap2 := map[string]*Table{"table2": inputTable2}
+	expectedTablesMap2 := map[string]*Table{"table2": expectedTable2}
+	inputTablesMap3 := map[string]*Table{"table3": inputTable3}
+	expectedTablesMap3 := map[string]*Table{"table3": expectedTable3}
+
+	tests := []struct {
+		name           string
+		inputLines     []string
+		inputTables    map[string]*Table
+		expectedTables map[string]*Table
+		expectedLines  []string
+		expectedError  error
+	}{
+		{
+			name:           "No input",
+			inputLines:     []string{},
+			inputTables:    map[string]*Table{"table1": &Table{}},
+			expectedTables: map[string]*Table{"table1": &Table{}},
+			expectedLines:  []string{},
+			expectedError:  nil,
+		},
+		{
+			name:           "No table",
+			inputLines:     []string{"ALTER TABLE ONLY table1 ADD CONSTRAINT table_pkey PRIMARY KEY (id);"},
+			inputTables:    map[string]*Table{},
+			expectedTables: map[string]*Table{},
+			expectedLines:  []string{"ALTER TABLE ONLY table1 ADD CONSTRAINT table_pkey PRIMARY KEY (id);"},
+			expectedError:  fmt.Errorf("constraint statements found with no mapped tables"),
+		},
+		{
+			name:           "Table does not exist",
+			inputLines:     []string{"ALTER TABLE ONLY table1 ADD CONSTRAINT table_pkey PRIMARY KEY (id);"},
+			inputTables:    map[string]*Table{"table2": &Table{}},
+			expectedTables: map[string]*Table{"table2": &Table{}},
+			expectedLines:  []string{"ALTER TABLE ONLY table1 ADD CONSTRAINT table_pkey PRIMARY KEY (id);"},
+			expectedError:  fmt.Errorf("table does not exist"),
+		},
+		{
+			name:           "Column does not exist - primary key",
+			inputLines:     []string{"ALTER TABLE ONLY table1 ADD CONSTRAINT table_pkey PRIMARY KEY (id);"},
+			inputTables:    map[string]*Table{"table1": &Table{Constraints: make(map[string]string)}},
+			expectedTables: map[string]*Table{"table1": &Table{Constraints: make(map[string]string)}},
+			expectedLines:  []string{"ALTER TABLE ONLY table1 ADD CONSTRAINT table_pkey PRIMARY KEY (id);"},
+			expectedError:  fmt.Errorf("column does not exist"),
+		},
+		{
+			name:           "Column does not exist - foreign key",
+			inputLines:     []string{"ALTER TABLE ONLY table1 ADD CONSTRAINT table_pkey FOREIGN KEY (id);"},
+			inputTables:    map[string]*Table{"table1": &Table{Constraints: make(map[string]string)}},
+			expectedTables: map[string]*Table{"table1": &Table{Constraints: make(map[string]string)}},
+			expectedLines:  []string{"ALTER TABLE ONLY table1 ADD CONSTRAINT table_pkey FOREIGN KEY (id);"},
+			expectedError:  fmt.Errorf("column does not exist"),
+		},
+		{
+			name:           "Primary key constraint",
+			inputLines:     []string{"ALTER TABLE ONLY table1 ADD CONSTRAINT table_pkey PRIMARY KEY (id);"},
+			inputTables:    inputTablesMap1,
+			expectedTables: expectedTablesMap1,
+			expectedLines:  []string{},
+			expectedError:  nil,
+		},
+		{
+			name:           "Foreign key constraint",
+			inputLines:     []string{"ALTER TABLE ONLY table2 ADD CONSTRAINT table_fkey FOREIGN KEY (id) REFERENCES table2(id) ON DELETE CASCADE;"},
+			inputTables:    inputTablesMap2,
+			expectedTables: expectedTablesMap2,
+			expectedLines:  []string{},
+			expectedError:  nil,
+		},
+		{
+			name:           "Constraint statements with extra lines",
+			inputLines:     []string{"", "abc", "ALTER TABLE ONLY table3 ADD CONSTRAINT table_pkey PRIMARY KEY (id);", "def"},
+			inputTables:    inputTablesMap3,
+			expectedTables: expectedTablesMap3,
+			expectedLines:  []string{"", "abc", "def"},
+			expectedError:  nil,
+		},
+	}
+	for _, test := range tests {
+		lines, err := MapConstraints(test.inputLines, test.inputTables)
+		if err != nil && err.Error() != test.expectedError.Error() {
+			t.Error(test.name + " - fatal error")
+		} else if !similarTables(test.inputTables, test.expectedTables) {
+			fmt.Println(test.inputTables["table1"])
+			fmt.Println(test.expectedTables["table1"])
+			t.Error(test.name + " - tables error")
+		} else if !similarLines(lines, test.expectedLines) {
+			t.Error(test.name + " - lines error")
+		}
+	}
+}
+
+func TestMapIndices(t *testing.T) {
+	inputTable1 := &Table{}
+	inputTable2 := &Table{}
+	expectedTable1 := &Table{Index: "CREATE UNIQUE INDEX user_idx ON table1 USING btree (username);"}
+	expectedTable2 := &Table{Index: "CREATE UNIQUE INDEX user_idx ON table2 USING btree (username);"}
+	inputTablesMap1 := map[string]*Table{"table1": inputTable1}
+	expectedTablesMap1 := map[string]*Table{"table1": expectedTable1}
+	inputTablesMap2 := map[string]*Table{"table2": inputTable2}
+	expectedTablesMap2 := map[string]*Table{"table2": expectedTable2}
+
+	tests := []struct {
+		name           string
+		inputLines     []string
+		inputTables    map[string]*Table
+		expectedTables map[string]*Table
+		expectedLines  []string
+		expectedError  error
+	}{
+		{
+			name:           "No input",
+			inputLines:     []string{},
+			inputTables:    map[string]*Table{"table1": &Table{}},
+			expectedTables: map[string]*Table{"table1": &Table{}},
+			expectedLines:  []string{},
+			expectedError:  nil,
+		},
+		{
+			name:           "No table",
+			inputLines:     []string{"CREATE UNIQUE INDEX user_idx ON table1 USING btree (username);"},
+			inputTables:    map[string]*Table{},
+			expectedTables: map[string]*Table{},
+			expectedLines:  []string{"CREATE UNIQUE INDEX user_idx ON table1 USING btree (username);"},
+			expectedError:  fmt.Errorf("index statements found with no mapped tables"),
+		},
+		{
+			name:           "Table does not exist",
+			inputLines:     []string{"CREATE UNIQUE INDEX user_idx ON table1 USING btree (username);"},
+			inputTables:    map[string]*Table{"table2": &Table{}},
+			expectedTables: map[string]*Table{"table2": &Table{}},
+			expectedLines:  []string{"CREATE UNIQUE INDEX user_idx ON table1 USING btree (username);"},
+			expectedError:  fmt.Errorf("table does not exist"),
+		},
+		{
+			name:           "Create index",
+			inputLines:     []string{"CREATE UNIQUE INDEX user_idx ON table1 USING btree (username);"},
+			inputTables:    inputTablesMap1,
+			expectedTables: expectedTablesMap1,
+			expectedLines:  []string{},
+			expectedError:  nil,
+		},
+		{
+			name:           "Index statements with extra lines",
+			inputLines:     []string{"", "abc", "CREATE UNIQUE INDEX user_idx ON table2 USING btree (username);", "def"},
+			inputTables:    inputTablesMap2,
+			expectedTables: expectedTablesMap2,
+			expectedLines:  []string{"", "abc", "def"},
+			expectedError:  nil,
+		},
+	}
+	for _, test := range tests {
+		lines, err := MapIndices(test.inputLines, test.inputTables)
+		if err != nil && err.Error() != test.expectedError.Error() {
+			t.Error(test.name + " - fatal error")
+		} else if !similarTables(test.inputTables, test.expectedTables) {
 			t.Error(test.name + " - tables error")
 		} else if !similarLines(lines, test.expectedLines) {
 			t.Error(test.name + " - lines error")
