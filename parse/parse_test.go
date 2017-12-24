@@ -564,6 +564,41 @@ func TestMapIndices(t *testing.T) {
 	}
 }
 
+func TestSquashMultiLineStatements(t *testing.T) {
+	input1 := []string{"abc", "def", "ghi;"}
+	expected1 := []string{"abc def ghi;"}
+	input2 := []string{"1234", "5;", "abc", "def;", "ghi;"}
+	expected2 := []string{"1234 5;", "abc def;", "ghi;"}
+
+	tests := []struct {
+		name     string
+		input    []string
+		expected []string
+	}{
+		{
+			name:     "No input",
+			input:    []string{},
+			expected: []string{},
+		},
+		{
+			name:     "Lines",
+			input:    input1,
+			expected: expected1,
+		},
+		{
+			name:     "Multiple lines",
+			input:    input2,
+			expected: expected2,
+		},
+	}
+	for _, test := range tests {
+		lines := SquashMultiLineStatements(test.input)
+		if !similarLines(lines, test.expected) {
+			t.Error(test.name + " - lines error")
+		}
+	}
+}
+
 func similarTables(tables1, tables2 map[string]*Table) bool {
 	if len(tables1) != len(tables2) {
 		return false
