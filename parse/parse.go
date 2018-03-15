@@ -362,7 +362,7 @@ func MapIndices(lines []string, tables map[string]*Table) ([]string, error) {
 				}
 			}
 			if table, ok := tables[tableName]; ok {
-				table.Index = line
+				table.Index = append(table.Index, line)
 			} else {
 				return lines, fmt.Errorf("mapping indices - table does not exist")
 			}
@@ -481,6 +481,7 @@ func getReferenceTables(tableName string, tables map[string]*Table) []string {
 		if strings.Contains(constraint, "FOREIGN KEY") {
 			tokens := strings.Split(constraint, "REFERENCES ")
 			ref := removeAccessModifier(tokens[1][:strings.Index(tokens[1], "(")])
+			refTables = append(refTables, ref)
 		}
 	}
 	return refTables
@@ -555,7 +556,9 @@ func PrintSchema(tables map[string]*Table) {
 			printTable(tableName, table)
 		}
 		if len(table.Index) > 0 {
-			fmt.Println(table.Index)
+			for _, index := range table.Index {
+				fmt.Println(index)
+			}
 		}
 		if i < len(tableNames)-1 {
 			fmt.Println()

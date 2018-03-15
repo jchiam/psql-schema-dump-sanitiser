@@ -496,8 +496,8 @@ func TestMapConstraints(t *testing.T) {
 func TestMapIndices(t *testing.T) {
 	inputTable1 := &Table{}
 	inputTable2 := &Table{}
-	expectedTable1 := &Table{Index: "CREATE UNIQUE INDEX user_idx ON table1 USING btree (username);"}
-	expectedTable2 := &Table{Index: "CREATE UNIQUE INDEX user_idx ON table2 USING btree (username);"}
+	expectedTable1 := &Table{Index: []string{"CREATE UNIQUE INDEX user_idx ON table1 USING btree (username);"}}
+	expectedTable2 := &Table{Index: []string{"CREATE UNIQUE INDEX user_idx ON table2 USING btree (username);"}}
 	inputTablesMap1 := map[string]*Table{"table1": inputTable1}
 	expectedTablesMap1 := map[string]*Table{"table1": expectedTable1}
 	inputTablesMap2 := map[string]*Table{"table2": inputTable2}
