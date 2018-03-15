@@ -215,20 +215,31 @@ func MapSequences(lines []string, tables map[string]*Table) ([]string, error) {
 		if strings.Contains(line, "CREATE SEQUENCE") {
 			createSeq := simplifyCreateSequenceStatement(line)
 
-			seqName, _ := removeAccessModifier(strings.Split(line, " ")[2])
+			seqName, modifier := removeAccessModifier(strings.Split(line, " ")[2])
 			if seqName[len(seqName)-1] == ';' {
 				seqName = seqName[:len(seqName)-1]
 			}
 
-			if strings.Contains(lines[i+1], "ALTER SEQUENCE "+seqName) {
+			if strings.Contains(lines[i+1], "ALTER SEQUENCE ") && strings.Contains(lines[i+1], seqName) {
 				alterSeq := lines[i+1]
 				ownedBy := strings.Split(alterSeq, " ")[5]
-				tableName := strings.Split(ownedBy, ".")[0]
+				var tableName string
+				if strings.Count(ownedBy, ".") > 1 {
+					tableName = strings.SplitAfterN(ownedBy, ".", 2)[1]
+					tableName = strings.Split(tableName, ".")[0]
+				} else {
+					tableName = strings.Split(ownedBy, ".")[0]
+				}
 
 				sequence := &Sequence{
 					Create:   createSeq,
 					Relation: alterSeq,
 				}
+				if len(modifier) > 0 {
+					sequence.Create = strings.Replace(createSeq, modifier+".", "", -1)
+					sequence.Relation = strings.Replace(alterSeq, modifier+".", "", -1)
+				}
+
 				if table, ok := tables[tableName]; ok {
 					table.Sequences = append(table.Sequences, sequence)
 				} else {
