@@ -101,6 +101,10 @@ func IsRedundant(line string) bool {
 	if strings.Contains(line, "EXTENSION") || strings.Contains(line, "OWNER") {
 		return true
 	}
+	// Skip config select statements
+	if strings.Contains(line, "SELECT pg_catalog.set_config") {
+		return true
+	}
 
 	return false
 }
