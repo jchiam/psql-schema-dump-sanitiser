@@ -232,7 +232,7 @@ func MapSequences(lines []string, tables map[string]*Table) ([]string, error) {
 				if table, ok := tables[tableName]; ok {
 					table.Sequences = append(table.Sequences, sequence)
 				} else {
-					return lines, fmt.Errorf("table does not exist")
+					return lines, fmt.Errorf("mapping sequences - table does not exist")
 				}
 			}
 		} else if strings.Contains(line, "ALTER SEQUENCE") && strings.Contains(line, "OWNED BY") {
@@ -277,10 +277,10 @@ func MapDefaultValues(lines []string, tables map[string]*Table) ([]string, error
 					column.Statement += " " + line[index:len(line)-1]
 					table.Columns = columns
 				} else {
-					return lines, fmt.Errorf("column does not exist")
+					return lines, fmt.Errorf("mapping default values - column does not exist")
 				}
 			} else {
-				return lines, fmt.Errorf("table does not exist")
+				return lines, fmt.Errorf("mapping default values - table does not exist")
 			}
 		} else {
 			bufferLines = append(bufferLines, line)
@@ -309,7 +309,7 @@ func MapConstraints(lines []string, tables map[string]*Table) ([]string, error) 
 			if table, ok := tables[tableName]; ok {
 				table.Constraints[constraintName] = line[index : len(line)-1]
 			} else {
-				return lines, fmt.Errorf("table does not exist")
+				return lines, fmt.Errorf("mapping constraints - table does not exist")
 			}
 
 			// update column primary or foreign keys
@@ -320,7 +320,7 @@ func MapConstraints(lines []string, tables map[string]*Table) ([]string, error) 
 						currentCol.IsPrimaryKey = true
 					} else {
 						delete(tables[tableName].Constraints, constraintName)
-						return lines, fmt.Errorf("column does not exist")
+						return lines, fmt.Errorf("mapping constraints - column does not exist")
 					}
 				}
 			} else if strings.Index(line, "FOREIGN KEY") != -1 {
@@ -364,7 +364,7 @@ func MapIndices(lines []string, tables map[string]*Table) ([]string, error) {
 			if table, ok := tables[tableName]; ok {
 				table.Index = line
 			} else {
-				return lines, fmt.Errorf("table does not exist")
+				return lines, fmt.Errorf("mapping indices - table does not exist")
 			}
 		} else {
 			bufferLines = append(bufferLines, line)
