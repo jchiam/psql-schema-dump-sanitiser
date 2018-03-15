@@ -31,7 +31,7 @@ type Table struct {
 	Columns     map[string]*Column
 	Constraints map[string]string
 	Sequences   []*Sequence
-	Index       string
+	Index       []string
 }
 
 func similarColumns(cols1, cols2 map[string]*Column) bool {
@@ -79,7 +79,8 @@ func similarConstraints(cons1, cons2 map[string]string) bool {
 // IsDeepEqual compares the two tables and returns whether they are deeply equal
 func (t Table) IsDeepEqual(table *Table) bool {
 	if !similarColumns(t.Columns, table.Columns) || !similarSequences(t.Sequences, table.Sequences) ||
-		!similarConstraints(t.Constraints, table.Constraints) || !cmp.Equal(t.Sequences, table.Sequences) || t.Index != table.Index {
+		!similarConstraints(t.Constraints, table.Constraints) || !cmp.Equal(t.Sequences, table.Sequences) ||
+		!cmp.Equal(t.Index, table.Index) {
 		return false
 	}
 	return true
@@ -104,6 +105,14 @@ func IsRedundant(line string) bool {
 	return false
 }
 
+func removeAccessModifier(s string) string {
+	tokens := strings.Split(s, ".")
+	if len(tokens) > 1 {
+		return tokens[1]
+	}
+	return tokens[0]
+}
+
 // MapTables parses sql statements and returns a map of Table structs containing information of table's structure
 // and the remaining unprocessed lines
 func MapTables(lines []string) (map[string]*Table, []string) {
@@ -116,7 +125,7 @@ func MapTables(lines []string) (map[string]*Table, []string) {
 	for i := 0; i < len(lines); i++ {
 		line := lines[i]
 		if strings.Contains(line, "CREATE TABLE") {
-			tableName := strings.Split(line, " ")[2]
+			tableName := removeAccessModifier(strings.Split(line, " ")[2])
 			table := Table{
 				Columns:     make(map[string]*Column),
 				Constraints: make(map[string]string),
@@ -202,7 +211,7 @@ func MapSequences(lines []string, tables map[string]*Table) ([]string, error) {
 		if strings.Contains(line, "CREATE SEQUENCE") {
 			createSeq := simplifyCreateSequenceStatement(line)
 
-			seqName := strings.Split(line, " ")[2]
+			seqName := removeAccessModifier(strings.Split(line, " ")[2])
 			if seqName[len(seqName)-1] == ';' {
 				seqName = seqName[:len(seqName)-1]
 			}
@@ -248,9 +257,9 @@ func MapDefaultValues(lines []string, tables map[string]*Table) ([]string, error
 			tokens := strings.Split(line, " ")
 			var tableName, columnName string
 			if tokens[2] == "ONLY" {
-				tableName = tokens[3]
+				tableName = removeAccessModifier(tokens[3])
 			} else {
-				tableName = tokens[2]
+				tableName = removeAccessModifier(tokens[2])
 			}
 			for i := range tokens {
 				if tokens[i] == "ALTER" && tokens[i+1] == "COLUMN" {
@@ -291,7 +300,7 @@ func MapConstraints(lines []string, tables map[string]*Table) ([]string, error) 
 		index := strings.Index(line, "CONSTRAINT")
 		if index != -1 {
 			tokens := strings.Split(line, " ")
-			tableName := tokens[3]
+			tableName := removeAccessModifier(tokens[3])
 			constraintName := tokens[6]
 			if table, ok := tables[tableName]; ok {
 				table.Constraints[constraintName] = line[index : len(line)-1]
@@ -345,7 +354,7 @@ func MapIndices(lines []string, tables map[string]*Table) ([]string, error) {
 			tableName := ""
 			for i := range tokens {
 				if tokens[i] == "ON" {
-					tableName = tokens[i+1]
+					tableName = removeAccessModifier(tokens[i+1])
 				}
 			}
 			if table, ok := tables[tableName]; ok {
@@ -467,7 +476,7 @@ func getReferenceTables(tableName string, tables map[string]*Table) []string {
 	for _, constraint := range tables[tableName].Constraints {
 		if strings.Contains(constraint, "FOREIGN KEY") {
 			tokens := strings.Split(constraint, "REFERENCES ")
-			refTables = append(refTables, tokens[1][:strings.Index(tokens[1], "(")])
+			ref := removeAccessModifier(tokens[1][:strings.Index(tokens[1], "(")])
 		}
 	}
 	return refTables
