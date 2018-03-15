@@ -109,12 +109,12 @@ func IsRedundant(line string) bool {
 	return false
 }
 
-func removeAccessModifier(s string) string {
+func removeAccessModifier(s string) (string, string) {
 	tokens := strings.Split(s, ".")
 	if len(tokens) > 1 {
-		return tokens[1]
+		return tokens[1], tokens[0]
 	}
-	return tokens[0]
+	return tokens[0], ""
 }
 
 // MapTables parses sql statements and returns a map of Table structs containing information of table's structure
@@ -129,7 +129,7 @@ func MapTables(lines []string) (map[string]*Table, []string) {
 	for i := 0; i < len(lines); i++ {
 		line := lines[i]
 		if strings.Contains(line, "CREATE TABLE") {
-			tableName := removeAccessModifier(strings.Split(line, " ")[2])
+			tableName, _ := removeAccessModifier(strings.Split(line, " ")[2])
 			table := Table{
 				Columns:     make(map[string]*Column),
 				Constraints: make(map[string]string),
@@ -215,7 +215,7 @@ func MapSequences(lines []string, tables map[string]*Table) ([]string, error) {
 		if strings.Contains(line, "CREATE SEQUENCE") {
 			createSeq := simplifyCreateSequenceStatement(line)
 
-			seqName := removeAccessModifier(strings.Split(line, " ")[2])
+			seqName, _ := removeAccessModifier(strings.Split(line, " ")[2])
 			if seqName[len(seqName)-1] == ';' {
 				seqName = seqName[:len(seqName)-1]
 			}
@@ -255,15 +255,16 @@ func MapDefaultValues(lines []string, tables map[string]*Table) ([]string, error
 	}
 
 	var bufferLines []string
+	var modifier string
 	for _, line := range lines {
 		index := strings.Index(line, "DEFAULT")
 		if index != -1 {
 			tokens := strings.Split(line, " ")
 			var tableName, columnName string
 			if tokens[2] == "ONLY" {
-				tableName = removeAccessModifier(tokens[3])
+				tableName, modifier = removeAccessModifier(tokens[3])
 			} else {
-				tableName = removeAccessModifier(tokens[2])
+				tableName, modifier = removeAccessModifier(tokens[2])
 			}
 			for i := range tokens {
 				if tokens[i] == "ALTER" && tokens[i+1] == "COLUMN" {
@@ -274,7 +275,11 @@ func MapDefaultValues(lines []string, tables map[string]*Table) ([]string, error
 			if table, ok := tables[tableName]; ok {
 				columns := table.Columns
 				if column, ok := columns[columnName]; ok {
-					column.Statement += " " + line[index:len(line)-1]
+					if len(modifier) > 0 {
+						column.Statement += " " + strings.Replace(line[index:len(line)-1], modifier+".", "", -1)
+					} else {
+						column.Statement += " " + line[index:len(line)-1]
+					}
 					table.Columns = columns
 				} else {
 					return lines, fmt.Errorf("mapping default values - column does not exist")
@@ -304,10 +309,14 @@ func MapConstraints(lines []string, tables map[string]*Table) ([]string, error) 
 		index := strings.Index(line, "CONSTRAINT")
 		if index != -1 {
 			tokens := strings.Split(line, " ")
-			tableName := removeAccessModifier(tokens[3])
+			tableName, modifier := removeAccessModifier(tokens[3])
 			constraintName := tokens[6]
 			if table, ok := tables[tableName]; ok {
-				table.Constraints[constraintName] = line[index : len(line)-1]
+				if len(modifier) > 0 {
+					table.Constraints[constraintName] = strings.Replace(line[index:len(line)-1], modifier+".", "", -1)
+				} else {
+					table.Constraints[constraintName] = line[index : len(line)-1]
+				}
 			} else {
 				return lines, fmt.Errorf("mapping constraints - table does not exist")
 			}
@@ -352,17 +361,22 @@ func MapIndices(lines []string, tables map[string]*Table) ([]string, error) {
 	}
 
 	var bufferLines []string
+	var modifier string
 	for _, line := range lines {
 		if strings.Contains(line, "INDEX") {
 			tokens := strings.Split(line, " ")
 			tableName := ""
 			for i := range tokens {
 				if tokens[i] == "ON" {
-					tableName = removeAccessModifier(tokens[i+1])
+					tableName, modifier = removeAccessModifier(tokens[i+1])
 				}
 			}
 			if table, ok := tables[tableName]; ok {
-				table.Index = append(table.Index, line)
+				if len(modifier) > 0 {
+					table.Index = append(table.Index, strings.Replace(line, modifier+".", "", -1))
+				} else {
+					table.Index = append(table.Index, line)
+				}
 			} else {
 				return lines, fmt.Errorf("mapping indices - table does not exist")
 			}
@@ -480,7 +494,7 @@ func getReferenceTables(tableName string, tables map[string]*Table) []string {
 	for _, constraint := range tables[tableName].Constraints {
 		if strings.Contains(constraint, "FOREIGN KEY") {
 			tokens := strings.Split(constraint, "REFERENCES ")
-			ref := removeAccessModifier(tokens[1][:strings.Index(tokens[1], "(")])
+			ref, _ := removeAccessModifier(tokens[1][:strings.Index(tokens[1], "(")])
 			refTables = append(refTables, ref)
 		}
 	}
