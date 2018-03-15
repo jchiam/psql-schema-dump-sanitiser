@@ -2,6 +2,7 @@
 psql-schema-dump-sanitiser
 
 # dev test files
+dump.sql
 schema.sql
 output.sql
 
