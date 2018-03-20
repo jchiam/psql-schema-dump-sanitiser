@@ -200,14 +200,12 @@ func simplifyCreateSequenceStatement(stmt string) string {
 	return stmt
 }
 
-// MapSequences parses sql statements and squashes them into a single create sequence statement.
+// MapSequences parses sql statements and squashes them into a single create sequence statement amd mapped to tables.
 // It then returns the remaining lines.
 // Note: Assumes relation statement is always after create statement.
 func MapSequences(lines []string, tables map[string]*Table) ([]string, error) {
 	if len(lines) == 0 {
 		return lines, nil
-	} else if len(tables) == 0 {
-		return lines, fmt.Errorf("sequence statements found with no mapped tables")
 	}
 
 	var bufferLines []string
@@ -245,6 +243,8 @@ func MapSequences(lines []string, tables map[string]*Table) ([]string, error) {
 				} else {
 					return lines, fmt.Errorf("mapping sequences - table does not exist")
 				}
+			} else {
+				bufferLines = append(bufferLines, line)
 			}
 		} else if strings.Contains(line, "ALTER SEQUENCE") && strings.Contains(line, "OWNED BY") {
 			continue
@@ -254,6 +254,32 @@ func MapSequences(lines []string, tables map[string]*Table) ([]string, error) {
 	}
 
 	return bufferLines, nil
+}
+
+// StoreSequences parses sql statements and squashes them into a single create sequence statement.
+// It then returns the remaining lines and sequences.
+// Note: Assumes sequences with related tables have been processed and removed.
+func StoreSequences(lines []string) ([]string, []string, error) {
+	if len(lines) == 0 {
+		return nil, lines, nil
+	}
+
+	var bufferLines, seqs []string
+	for _, line := range lines {
+		if strings.Contains(line, "CREATE SEQUENCE") {
+			seq := simplifyCreateSequenceStatement(line)
+
+			_, modifier := removeAccessModifier(strings.Split(line, " ")[2])
+			if len(modifier) > 0 {
+				seq = strings.Replace(seq, modifier+".", "", -1)
+			}
+			seqs = append(seqs, seq)
+		} else {
+			bufferLines = append(bufferLines, line)
+		}
+	}
+
+	return bufferLines, seqs, nil
 }
 
 // MapDefaultValues parses sql statements and maps default value related statements to its column in tables
@@ -565,7 +591,14 @@ func sortTables(tables map[string]*Table) []string {
 }
 
 // PrintSchema prints the schema into palatable form in console output
-func PrintSchema(tables map[string]*Table) {
+func PrintSchema(tables map[string]*Table, seqs []string) {
+	// print independent sequences
+	for _, seq := range seqs {
+		fmt.Println(seq)
+	}
+	fmt.Println("")
+
+	// print tables
 	tableNames := sortTables(tables)
 	for i, tableName := range tableNames {
 		table := tables[tableName]
