@@ -51,19 +51,25 @@ func main() {
 		log.Fatal(err)
 	}
 
-	// 5. Add default values to columns
+	// 5. Store sequences not owned by table columns
+	lines, seqs, err := parse.StoreSequences(lines)
+	if err != nil {
+		log.Fatal(err)
+	}
+
+	// 6. Add default values to columns
 	lines, err = parse.MapDefaultValues(lines, tables)
 	if err != nil {
 		log.Fatal(err)
 	}
 
-	// 6. Map constraint statements to tables
+	// 7. Map constraint statements to tables
 	lines, err = parse.MapConstraints(lines, tables)
 	if err != nil {
 		log.Fatal(err)
 	}
 
-	// 7. Map index statements to tables
+	// 8. Map index statements to tables
 	lines, err = parse.MapIndices(lines, tables)
 	if err != nil {
 		log.Fatal(err)
@@ -73,6 +79,6 @@ func main() {
 		log.Fatal(fmt.Errorf("%d unprocessed lines remaining", len(lines)))
 	}
 
-	// 8. Print
-	parse.PrintSchema(tables)
+	// 9. Print
+	parse.PrintSchema(tables, seqs)
 }

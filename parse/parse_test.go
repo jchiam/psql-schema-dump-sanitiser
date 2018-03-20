@@ -166,14 +166,6 @@ func TestMapSequences(t *testing.T) {
 			expectedError:  nil,
 		},
 		{
-			name:           "No table",
-			inputLines:     []string{"CREATE SEQUENCE seq START WITH 1 INCREMENT BY 1 NO MINVALUE NO MAXVALUE CACHE 1;", "ALTER SEQUENCE seq OWNED BY table1.col;"},
-			inputTables:    map[string]*Table{},
-			expectedTables: map[string]*Table{},
-			expectedLines:  []string{"CREATE SEQUENCE seq START WITH 1 INCREMENT BY 1 NO MINVALUE NO MAXVALUE CACHE 1;", "ALTER SEQUENCE seq OWNED BY table1.col;"},
-			expectedError:  fmt.Errorf("sequence statements found with no mapped tables"),
-		},
-		{
 			name:           "Table does not exist",
 			inputLines:     []string{"CREATE SEQUENCE seq START WITH 1 INCREMENT BY 1 NO MINVALUE NO MAXVALUE CACHE 1;", "ALTER SEQUENCE seq OWNED BY table1.col;"},
 			inputTables:    map[string]*Table{"table2": &Table{}},
