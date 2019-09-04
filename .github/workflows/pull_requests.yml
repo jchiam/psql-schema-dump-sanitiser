@@ -1,8 +1,5 @@
 name: Check PR
-on:
-  pull_request:
-    branches:
-    - master
+on: push
 
 jobs:
   imports:
