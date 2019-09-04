@@ -359,7 +359,7 @@ func MapConstraints(lines []string, tables map[string]*Table) ([]string, error) 
 			}
 
 			// update column primary or foreign keys
-			if strings.Index(line, "PRIMARY KEY") != -1 {
+			if strings.Contains(line, "PRIMARY KEY") {
 				columns := strings.Split(line[strings.Index(line, "(")+1:strings.Index(line, ")")], ", ")
 				for _, column := range columns {
 					if currentCol, ok := tables[tableName].Columns[column]; ok {
@@ -369,7 +369,7 @@ func MapConstraints(lines []string, tables map[string]*Table) ([]string, error) 
 						return lines, fmt.Errorf("mapping constraints - column does not exist")
 					}
 				}
-			} else if strings.Index(line, "FOREIGN KEY") != -1 {
+			} else if strings.Contains(line, "FOREIGN KEY") {
 				columns := strings.Split(line[strings.Index(line, "(")+1:strings.Index(line, ")")], ", ")
 				for _, column := range columns {
 					if currentCol, ok := tables[tableName].Columns[column]; ok {
