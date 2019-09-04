@@ -2,7 +2,7 @@
 
 This go library serves to produce a more human readable schema dump by cleaning up the output from PostgreSQL's `pg_dump -s` command.
 
-The library was last updated with PostgreSQL 10.1.
+The library was last updated with PostgreSQL 11.
 
 ## Setup
 
