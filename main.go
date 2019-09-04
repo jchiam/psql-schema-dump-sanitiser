@@ -21,7 +21,12 @@ func main() {
 	if err != nil {
 		log.Fatal(err)
 	}
-	defer file.Close()
+	defer func() {
+		cerr := file.Close()
+		if cerr != nil {
+			log.Fatal(cerr)
+		}
+	}()
 	reader := bufio.NewReader(file)
 
 	var lines []string
