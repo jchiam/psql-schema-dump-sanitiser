@@ -261,7 +261,7 @@ func MapSequences(lines []string, tables map[string]*Table) ([]string, error) {
 // Note: Assumes sequences with related tables have been processed and removed.
 func StoreSequences(lines []string) ([]string, []string, error) {
 	if len(lines) == 0 {
-		return nil, lines, nil
+		return lines, nil, nil
 	}
 
 	var bufferLines, seqs []string
@@ -515,7 +515,6 @@ func printConstraints(table *Table) {
 		} else {
 			fmt.Print(",\n")
 		}
-		i++
 	}
 }
 
@@ -590,13 +589,51 @@ func sortTables(tables map[string]*Table) []string {
 	return sortedNodeIDs
 }
 
+// StoreTriggers parses sql statements for triggers and trigger functions.
+// It then returns the remaining lines and sequences.
+func StoreTriggers(lines []string) ([]string, []string, error) {
+	if len(lines) == 0 {
+		return lines, nil, nil
+	}
+
+	var bufferLines, triggers []string
+	var isProcessingTrigger bool
+	var accessModifier string
+	for _, line := range lines {
+		if strings.Contains(line, "CREATE FUNCTION") && strings.Contains(line, "RETURNS trigger") {
+			isProcessingTrigger = true
+
+			_, accessModifier = removeAccessModifier(strings.Split(line, " ")[2])
+			if len(accessModifier) > 0 {
+				line = strings.Replace(line, accessModifier+".", "", -1)
+			}
+
+			triggers = append(triggers, line)
+		} else if strings.Contains(line, "CREATE TRIGGER") {
+			if len(accessModifier) > 0 {
+				line = strings.Replace(line, accessModifier+".", "", -1)
+			}
+
+			triggers = append(triggers, line)
+
+			isProcessingTrigger = false
+		} else if isProcessingTrigger {
+			triggers = append(triggers, line)
+		} else {
+			bufferLines = append(bufferLines, line)
+		}
+	}
+
+	return bufferLines, triggers, nil
+}
+
 // PrintSchema prints the schema into palatable form in console output
-func PrintSchema(tables map[string]*Table, seqs []string) {
+func PrintSchema(tables map[string]*Table, seqs, triggers []string) {
 	// print independent sequences
 	for _, seq := range seqs {
 		fmt.Println(seq)
 	}
-	fmt.Println("")
+	fmt.Println()
 
 	// print tables
 	tableNames := sortTables(tables)
@@ -619,6 +656,16 @@ func PrintSchema(tables map[string]*Table, seqs []string) {
 			}
 		}
 		if i < len(tableNames)-1 {
+			fmt.Println()
+		}
+	}
+	fmt.Println()
+
+	// print triggers
+	for i, tr := range triggers {
+		fmt.Println(tr)
+
+		if strings.Contains(tr, "CREATE TRIGGER") && i < len(triggers)-1 {
 			fmt.Println()
 		}
 	}

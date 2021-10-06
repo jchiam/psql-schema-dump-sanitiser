@@ -80,10 +80,16 @@ func main() {
 		log.Fatal(err)
 	}
 
+	// 9. Store triggers and trigger functions
+	lines, triggers, err := parse.StoreTriggers(lines)
+	if err != nil {
+		log.Fatal(err)
+	}
+
 	if len(lines) != 0 {
 		log.Fatal(fmt.Errorf("%d unprocessed lines remaining", len(lines)))
 	}
 
 	// 9. Print
-	parse.PrintSchema(tables, seqs)
+	parse.PrintSchema(tables, seqs, triggers)
 }
