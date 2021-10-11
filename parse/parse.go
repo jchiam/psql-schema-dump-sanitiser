@@ -343,8 +343,9 @@ func MapConstraints(lines []string, tables map[string]*Table) ([]string, error) 
 
 	var bufferLines []string
 	for _, line := range lines {
+		// check for "CONSTRAINT" and not a trigger function
 		index := strings.Index(line, "CONSTRAINT")
-		if index != -1 {
+		if index != -1 && !strings.Contains(line, "CONSTRAINT TRIGGER") {
 			tokens := strings.Split(line, " ")
 			tableName, modifier := removeAccessModifier(tokens[3])
 			constraintName := tokens[6]
@@ -609,7 +610,7 @@ func StoreTriggers(lines []string) ([]string, []string, error) {
 			}
 
 			triggers = append(triggers, line)
-		} else if strings.Contains(line, "CREATE TRIGGER") {
+		} else if strings.Contains(line, "CREATE TRIGGER") || strings.Contains(line, "CREATE CONSTRAINT TRIGGER") {
 			if len(accessModifier) > 0 {
 				line = strings.Replace(line, accessModifier+".", "", -1)
 			}
@@ -662,12 +663,8 @@ func PrintSchema(tables map[string]*Table, seqs, triggers []string) {
 	fmt.Println()
 
 	// print triggers
-	for i, tr := range triggers {
+	for _, tr := range triggers {
 		fmt.Println(tr)
-
-		if strings.Contains(tr, "CREATE TRIGGER") && i < len(triggers)-1 {
-			fmt.Println()
-		}
 	}
 }
 
