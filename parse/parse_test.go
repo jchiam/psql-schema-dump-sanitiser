@@ -69,12 +69,8 @@ func TestMapTables(t *testing.T) {
 	}
 	expectedTable1 := &Table{
 		Columns: map[string]*Column{
-			"col1": &Column{
-				Statement: "varchar",
-			},
-			"col2": &Column{
-				Statement: "string",
-			},
+			"col1": {Statement: "varchar"},
+			"col2": {Statement: "string"},
 		},
 	}
 	expectedTable2 := &Table{}
@@ -132,7 +128,7 @@ func TestMapTables(t *testing.T) {
 func TestMapSequences(t *testing.T) {
 	expectedTable1 := &Table{
 		Sequences: []*Sequence{
-			&Sequence{
+			{
 				Create:   "CREATE SEQUENCE seq;",
 				Relation: "ALTER SEQUENCE seq OWNED BY table1.col;",
 			},
@@ -140,7 +136,7 @@ func TestMapSequences(t *testing.T) {
 	}
 	expectedTable2 := &Table{
 		Sequences: []*Sequence{
-			&Sequence{
+			{
 				Create:   "CREATE SEQUENCE seq START WITH 2 CACHE 2;",
 				Relation: "ALTER SEQUENCE seq OWNED BY table1.col;",
 			},
@@ -160,23 +156,23 @@ func TestMapSequences(t *testing.T) {
 		{
 			name:           "No input",
 			inputLines:     []string{},
-			inputTables:    map[string]*Table{"table1": &Table{}},
-			expectedTables: map[string]*Table{"table1": &Table{}},
+			inputTables:    map[string]*Table{"table1": {}},
+			expectedTables: map[string]*Table{"table1": {}},
 			expectedLines:  []string{},
 			expectedError:  nil,
 		},
 		{
 			name:           "Table does not exist",
 			inputLines:     []string{"CREATE SEQUENCE seq START WITH 1 INCREMENT BY 1 NO MINVALUE NO MAXVALUE CACHE 1;", "ALTER SEQUENCE seq OWNED BY table1.col;"},
-			inputTables:    map[string]*Table{"table2": &Table{}},
-			expectedTables: map[string]*Table{"table2": &Table{}},
+			inputTables:    map[string]*Table{"table2": {}},
+			expectedTables: map[string]*Table{"table2": {}},
 			expectedLines:  []string{"CREATE SEQUENCE seq START WITH 1 INCREMENT BY 1 NO MINVALUE NO MAXVALUE CACHE 1;", "ALTER SEQUENCE seq OWNED BY table1.col;"},
 			expectedError:  fmt.Errorf("mapping sequences - table does not exist"),
 		},
 		{
 			name:           "Sequence statements with default flags",
 			inputLines:     []string{"CREATE SEQUENCE seq START WITH 1 INCREMENT BY 1 NO MINVALUE NO MAXVALUE CACHE 1;", "ALTER SEQUENCE seq OWNED BY table1.col;"},
-			inputTables:    map[string]*Table{"table1": &Table{}},
+			inputTables:    map[string]*Table{"table1": {}},
 			expectedTables: expectedTablesMap1,
 			expectedLines:  []string{},
 			expectedError:  nil,
@@ -184,7 +180,7 @@ func TestMapSequences(t *testing.T) {
 		{
 			name:           "Sequence statements without default flags",
 			inputLines:     []string{"CREATE SEQUENCE seq;", "ALTER SEQUENCE seq OWNED BY table1.col;"},
-			inputTables:    map[string]*Table{"table1": &Table{}},
+			inputTables:    map[string]*Table{"table1": {}},
 			expectedTables: expectedTablesMap1,
 			expectedLines:  []string{},
 			expectedError:  nil,
@@ -192,7 +188,7 @@ func TestMapSequences(t *testing.T) {
 		{
 			name:           "Sequence statements with default flags",
 			inputLines:     []string{"CREATE SEQUENCE seq START WITH 2 INCREMENT BY 1 NO MINVALUE NO MAXVALUE CACHE 2;", "ALTER SEQUENCE seq OWNED BY table1.col;"},
-			inputTables:    map[string]*Table{"table1": &Table{}},
+			inputTables:    map[string]*Table{"table1": {}},
 			expectedTables: expectedTablesMap2,
 			expectedLines:  []string{},
 			expectedError:  nil,
@@ -200,7 +196,7 @@ func TestMapSequences(t *testing.T) {
 		{
 			name:           "Sequence statements with extra lines",
 			inputLines:     []string{"\n", "abc", "CREATE SEQUENCE seq;", "ALTER SEQUENCE seq OWNED BY table1.col;", "end"},
-			inputTables:    map[string]*Table{"table1": &Table{}},
+			inputTables:    map[string]*Table{"table1": {}},
 			expectedTables: expectedTablesMap1,
 			expectedLines:  []string{"\n", "abc", "end"},
 			expectedError:  nil,
@@ -221,38 +217,38 @@ func TestMapSequences(t *testing.T) {
 func TestMapDefaultValues(t *testing.T) {
 	inputTable1 := &Table{
 		Columns: map[string]*Column{
-			"col1": &Column{Statement: "varchar"},
-			"col2": &Column{Statement: "string"},
+			"col1": {Statement: "varchar"},
+			"col2": {Statement: "string"},
 		},
 	}
 	inputTable2 := &Table{
 		Columns: map[string]*Column{
-			"col1": &Column{Statement: "varchar"},
-			"col2": &Column{Statement: "string"},
+			"col1": {Statement: "varchar"},
+			"col2": {Statement: "string"},
 		},
 	}
 	inputTable3 := &Table{
 		Columns: map[string]*Column{
-			"col1": &Column{Statement: "varchar"},
-			"col2": &Column{Statement: "string"},
+			"col1": {Statement: "varchar"},
+			"col2": {Statement: "string"},
 		},
 	}
 	expectedTable1 := &Table{
 		Columns: map[string]*Column{
-			"col1": &Column{Statement: "varchar DEFAULT nextval('seq'::regclass)"},
-			"col2": &Column{Statement: "string"},
+			"col1": {Statement: "varchar DEFAULT nextval('seq'::regclass)"},
+			"col2": {Statement: "string"},
 		},
 	}
 	expectedTable2 := &Table{
 		Columns: map[string]*Column{
-			"col1": &Column{Statement: "varchar"},
-			"col2": &Column{Statement: "string DEFAULT nextval('seq'::regclass)"},
+			"col1": {Statement: "varchar"},
+			"col2": {Statement: "string DEFAULT nextval('seq'::regclass)"},
 		},
 	}
 	expectedTable3 := &Table{
 		Columns: map[string]*Column{
-			"col1": &Column{Statement: "varchar DEFAULT nextval('seq'::regclass)"},
-			"col2": &Column{Statement: "string"},
+			"col1": {Statement: "varchar DEFAULT nextval('seq'::regclass)"},
+			"col2": {Statement: "string"},
 		},
 	}
 	inputTablesMap1 := map[string]*Table{"table1": inputTable1}
@@ -273,8 +269,8 @@ func TestMapDefaultValues(t *testing.T) {
 		{
 			name:           "No input",
 			inputLines:     []string{},
-			inputTables:    map[string]*Table{"table1": &Table{}},
-			expectedTables: map[string]*Table{"table1": &Table{}},
+			inputTables:    map[string]*Table{"table1": {}},
+			expectedTables: map[string]*Table{"table1": {}},
 			expectedLines:  []string{},
 			expectedError:  nil,
 		},
@@ -289,16 +285,16 @@ func TestMapDefaultValues(t *testing.T) {
 		{
 			name:           "Table does not exist",
 			inputLines:     []string{"ALTER TABLE ONLY test ALTER COLUMN id SET DEFAULT nextval('seq'::regclass);"},
-			inputTables:    map[string]*Table{"table2": &Table{}},
-			expectedTables: map[string]*Table{"table2": &Table{}},
+			inputTables:    map[string]*Table{"table2": {}},
+			expectedTables: map[string]*Table{"table2": {}},
 			expectedLines:  []string{"ALTER TABLE ONLY test ALTER COLUMN id SET DEFAULT nextval('seq'::regclass);"},
 			expectedError:  fmt.Errorf("mapping default values - table does not exist"),
 		},
 		{
 			name:           "Column does not exist",
 			inputLines:     []string{"ALTER TABLE ONLY table1 ALTER COLUMN id SET DEFAULT nextval('seq'::regclass);"},
-			inputTables:    map[string]*Table{"table1": &Table{Columns: make(map[string]*Column)}},
-			expectedTables: map[string]*Table{"table1": &Table{Columns: make(map[string]*Column)}},
+			inputTables:    map[string]*Table{"table1": {Columns: make(map[string]*Column)}},
+			expectedTables: map[string]*Table{"table1": {Columns: make(map[string]*Column)}},
 			expectedLines:  []string{"ALTER TABLE ONLY table1 ALTER COLUMN id SET DEFAULT nextval('seq'::regclass);"},
 			expectedError:  fmt.Errorf("mapping default values - column does not exist"),
 		},
@@ -342,25 +338,25 @@ func TestMapDefaultValues(t *testing.T) {
 func TestMapConstraints(t *testing.T) {
 	inputTable1 := &Table{
 		Columns: map[string]*Column{
-			"id": &Column{Statement: "col id"},
+			"id": {Statement: "col id"},
 		},
 		Constraints: make(map[string]string),
 	}
 	inputTable2 := &Table{
 		Columns: map[string]*Column{
-			"id": &Column{Statement: "col id"},
+			"id": {Statement: "col id"},
 		},
 		Constraints: make(map[string]string),
 	}
 	inputTable3 := &Table{
 		Columns: map[string]*Column{
-			"id": &Column{Statement: "col id"},
+			"id": {Statement: "col id"},
 		},
 		Constraints: make(map[string]string),
 	}
 	expectedTable1 := &Table{
 		Columns: map[string]*Column{
-			"id": &Column{
+			"id": {
 				Statement:    "col id",
 				IsPrimaryKey: true,
 			},
@@ -371,7 +367,7 @@ func TestMapConstraints(t *testing.T) {
 	}
 	expectedTable2 := &Table{
 		Columns: map[string]*Column{
-			"id": &Column{
+			"id": {
 				Statement:    "col id",
 				IsForeignKey: true,
 			},
@@ -382,7 +378,7 @@ func TestMapConstraints(t *testing.T) {
 	}
 	expectedTable3 := &Table{
 		Columns: map[string]*Column{
-			"id": &Column{
+			"id": {
 				Statement:    "col id",
 				IsPrimaryKey: true,
 			},
@@ -409,8 +405,8 @@ func TestMapConstraints(t *testing.T) {
 		{
 			name:           "No input",
 			inputLines:     []string{},
-			inputTables:    map[string]*Table{"table1": &Table{}},
-			expectedTables: map[string]*Table{"table1": &Table{}},
+			inputTables:    map[string]*Table{"table1": {}},
+			expectedTables: map[string]*Table{"table1": {}},
 			expectedLines:  []string{},
 			expectedError:  nil,
 		},
@@ -425,24 +421,24 @@ func TestMapConstraints(t *testing.T) {
 		{
 			name:           "Table does not exist",
 			inputLines:     []string{"ALTER TABLE ONLY table1 ADD CONSTRAINT table_pkey PRIMARY KEY (id);"},
-			inputTables:    map[string]*Table{"table2": &Table{}},
-			expectedTables: map[string]*Table{"table2": &Table{}},
+			inputTables:    map[string]*Table{"table2": {}},
+			expectedTables: map[string]*Table{"table2": {}},
 			expectedLines:  []string{"ALTER TABLE ONLY table1 ADD CONSTRAINT table_pkey PRIMARY KEY (id);"},
 			expectedError:  fmt.Errorf("mapping constraints - table does not exist"),
 		},
 		{
 			name:           "Column does not exist - primary key",
 			inputLines:     []string{"ALTER TABLE ONLY table1 ADD CONSTRAINT table_pkey PRIMARY KEY (id);"},
-			inputTables:    map[string]*Table{"table1": &Table{Constraints: make(map[string]string)}},
-			expectedTables: map[string]*Table{"table1": &Table{Constraints: make(map[string]string)}},
+			inputTables:    map[string]*Table{"table1": {Constraints: make(map[string]string)}},
+			expectedTables: map[string]*Table{"table1": {Constraints: make(map[string]string)}},
 			expectedLines:  []string{"ALTER TABLE ONLY table1 ADD CONSTRAINT table_pkey PRIMARY KEY (id);"},
 			expectedError:  fmt.Errorf("mapping constraints - column does not exist"),
 		},
 		{
 			name:           "Column does not exist - foreign key",
 			inputLines:     []string{"ALTER TABLE ONLY table1 ADD CONSTRAINT table_pkey FOREIGN KEY (id);"},
-			inputTables:    map[string]*Table{"table1": &Table{Constraints: make(map[string]string)}},
-			expectedTables: map[string]*Table{"table1": &Table{Constraints: make(map[string]string)}},
+			inputTables:    map[string]*Table{"table1": {Constraints: make(map[string]string)}},
+			expectedTables: map[string]*Table{"table1": {Constraints: make(map[string]string)}},
 			expectedLines:  []string{"ALTER TABLE ONLY table1 ADD CONSTRAINT table_pkey FOREIGN KEY (id);"},
 			expectedError:  fmt.Errorf("column does not exist"),
 		},
@@ -506,8 +502,8 @@ func TestMapIndices(t *testing.T) {
 		{
 			name:           "No input",
 			inputLines:     []string{},
-			inputTables:    map[string]*Table{"table1": &Table{}},
-			expectedTables: map[string]*Table{"table1": &Table{}},
+			inputTables:    map[string]*Table{"table1": {}},
+			expectedTables: map[string]*Table{"table1": {}},
 			expectedLines:  []string{},
 			expectedError:  nil,
 		},
@@ -522,8 +518,8 @@ func TestMapIndices(t *testing.T) {
 		{
 			name:           "Table does not exist",
 			inputLines:     []string{"CREATE UNIQUE INDEX user_idx ON table1 USING btree (username);"},
-			inputTables:    map[string]*Table{"table2": &Table{}},
-			expectedTables: map[string]*Table{"table2": &Table{}},
+			inputTables:    map[string]*Table{"table2": {}},
+			expectedTables: map[string]*Table{"table2": {}},
 			expectedLines:  []string{"CREATE UNIQUE INDEX user_idx ON table1 USING btree (username);"},
 			expectedError:  fmt.Errorf("mapping indices - table does not exist"),
 		},
