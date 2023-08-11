@@ -558,8 +558,11 @@ func sortTables(tables map[string]*Table) []string {
 	for id, node := range nodes {
 		parents := getReferenceTables(id, tables)
 		for _, parent := range parents {
-			node.Parents[parent] = nodes[parent]
-			nodes[parent].Children[id] = node
+			// exclude self-referencing tables
+			if parent != id {
+				node.Parents[parent] = nodes[parent]
+				nodes[parent].Children[id] = node
+			}
 		}
 	}
 
