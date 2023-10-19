@@ -593,6 +593,40 @@ func sortTables(tables map[string]*Table) []string {
 	return sortedNodeIDs
 }
 
+// StoreFunctions parses sql statements for functions.
+// It then returns the remaining lines and sequences.
+func StoreFunctions(lines []string) ([]string, []string, error) {
+	if len(lines) == 0 {
+		return lines, nil, nil
+	}
+
+	var bufferLines, functions []string
+	var isProcessingFunction bool
+	var accessModifier string
+	for _, line := range lines {
+		if strings.Contains(line, "CREATE FUNCTION") {
+			isProcessingFunction = true
+
+			_, accessModifier = removeAccessModifier(strings.Split(line, " ")[2])
+			if len(accessModifier) > 0 {
+				line = strings.Replace(line, accessModifier+".", "", -1)
+			}
+
+			functions = append(functions, line)
+		} else if isProcessingFunction {
+			functions = append(functions, line)
+
+			if line == "$$;" {
+				isProcessingFunction = false
+			}
+		} else {
+			bufferLines = append(bufferLines, line)
+		}
+	}
+
+	return bufferLines, functions, nil
+}
+
 // StoreTriggers parses sql statements for triggers and trigger functions.
 // It then returns the remaining lines and sequences.
 func StoreTriggers(lines []string) ([]string, []string, error) {
@@ -601,27 +635,14 @@ func StoreTriggers(lines []string) ([]string, []string, error) {
 	}
 
 	var bufferLines, triggers []string
-	var isProcessingTrigger bool
 	var accessModifier string
 	for _, line := range lines {
-		if strings.Contains(line, "CREATE FUNCTION") && strings.Contains(line, "RETURNS trigger") {
-			isProcessingTrigger = true
-
+		if strings.Contains(line, "CREATE TRIGGER") || strings.Contains(line, "CREATE CONSTRAINT TRIGGER") {
 			_, accessModifier = removeAccessModifier(strings.Split(line, " ")[2])
 			if len(accessModifier) > 0 {
 				line = strings.Replace(line, accessModifier+".", "", -1)
 			}
 
-			triggers = append(triggers, line)
-		} else if strings.Contains(line, "CREATE TRIGGER") || strings.Contains(line, "CREATE CONSTRAINT TRIGGER") {
-			if len(accessModifier) > 0 {
-				line = strings.Replace(line, accessModifier+".", "", -1)
-			}
-
-			triggers = append(triggers, line)
-
-			isProcessingTrigger = false
-		} else if isProcessingTrigger {
 			triggers = append(triggers, line)
 		} else {
 			bufferLines = append(bufferLines, line)
@@ -632,7 +653,7 @@ func StoreTriggers(lines []string) ([]string, []string, error) {
 }
 
 // PrintSchema prints the schema into palatable form in console output
-func PrintSchema(tables map[string]*Table, seqs, triggers []string) {
+func PrintSchema(tables map[string]*Table, seqs, functions, triggers []string) {
 	// print independent sequences
 	for _, seq := range seqs {
 		fmt.Println(seq)
@@ -662,6 +683,12 @@ func PrintSchema(tables map[string]*Table, seqs, triggers []string) {
 		if i < len(tableNames)-1 {
 			fmt.Println()
 		}
+	}
+	fmt.Println()
+
+	// print functions
+	for _, f := range functions {
+		fmt.Println(f)
 	}
 	fmt.Println()
 
